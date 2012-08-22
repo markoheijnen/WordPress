@@ -144,11 +144,15 @@ function wp_generate_attachment_metadata( $attachment_id, $file ) {
 
 		$sizes = apply_filters( 'intermediate_image_sizes_advanced', $sizes );
 
+		$editor = new WP_Image_Editor( $file );
+
 		foreach ($sizes as $size => $size_data ) {
-			$resized = image_make_intermediate_size( $file, $size_data['width'], $size_data['height'], $size_data['crop'] );
-			if ( $resized )
+			$resized = $editor->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+			if ( ! is_wp_error( $resized ) && $resized )
 				$metadata['sizes'][$size] = $resized;
 		}
+
+		unset( $editor );
 
 		// fetch additional metadata from exif/iptc
 		$image_meta = wp_read_image_metadata( $file );
