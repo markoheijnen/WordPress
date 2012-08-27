@@ -44,10 +44,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	function get_resource() {
-		return $this->image;
-	}
-
 	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ! $this->load() )
 			return;
