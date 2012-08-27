@@ -16,6 +16,11 @@ class WP_Image_Editor_Base {
 		return false;
 	}
 
+	public function get_size() {
+		// refresh from file or stored image in memory.            
+		return $this->size;
+	}
+
 	public function set_quality( $quality ) {
 		$this->quality = apply_filters( 'wp_editor_set_quality', $quality );
 	}
