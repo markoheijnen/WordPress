@@ -3254,7 +3254,9 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	_deprecated_function( __FUNCTION__, '3.5', 'wp_get_image_for_editing()' );
 
 	$editor = new WP_Image_Editor_GD( $file );
+	$editor->set_quality( $jpeg_quality );
+
 	$editor->resize( $max_w, $max_h, $crop );
-	$editor->save( $suffix, $dest_path, $jpeg_quality );
+	$editor->save( $suffix, $dest_path );
 	unset( $editor );
 }

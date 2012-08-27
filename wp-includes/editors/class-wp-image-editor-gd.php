@@ -113,7 +113,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return false; // @TODO: WP_Error here.
 	}
 
-	public function save( $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
+	public function save( $suffix = null, $dest_path = null ) {
 		if ( ! is_resource( $this->dest_image ) )
 			return new WP_Error( 'no_dst_image', __( 'No action performed' ) );
 
@@ -148,7 +148,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if ( 'jpg' != $ext && 'jpeg' != $ext )
 				$destfilename = "{$dir}/{$name}-{$suffix}.jpg";
 
-			if ( ! imagejpeg( $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $jpeg_quality, 'image_resize' ) ) )
+			if ( ! imagejpeg( $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 
@@ -161,7 +161,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		return array(
 			'path' => $destfilename,
-			'file' => wp_basename(  apply_filters( 'image_make_intermediate_size', $destfilename ) ),
+			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
 			'width' => $this->dest_size['width'],
 			'height' => $this->dest_size['height']
 		);

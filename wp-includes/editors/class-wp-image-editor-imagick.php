@@ -33,7 +33,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	public function resize( $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
+	public function resize( $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null ) {
 		// Yes, this is forcing a load every time at the moment.
 		// However, for multi-resize to work, it needs to do so, unless it's going to resize based on a modified image.
 		if ( ! $this->load() )
@@ -48,8 +48,11 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
 
 		if( 'JPEG' == $this->orig_type ) {
+			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) );
 			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
-			$this->image->setImageCompressionQuality( $jpeg_quality );
+		}
+		else {
+			$this->image->setImageCompressionQuality( $this->quality );
 		}
 
 		if ( $crop ) {
@@ -85,7 +88,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 
 		return array(
 			'path' => $destfilename,
-			'file' => wp_basename(  apply_filters( 'image_make_intermediate_size', $destfilename ) ),
+			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
 			'width' => $dst_w,
 			'height' => $dst_h
 		);
