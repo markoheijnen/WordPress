@@ -147,7 +147,8 @@ function wp_generate_attachment_metadata( $attachment_id, $file ) {
 		$editor = WP_Image_Editor::get_instance( $file );
 
 		foreach ($sizes as $size => $size_data ) {
-			$resized = $editor->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+			$editor->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+			$resized = $editor->save();
 			if ( ! is_wp_error( $resized ) && $resized )
 				$metadata['sizes'][$size] = $resized;
 		}

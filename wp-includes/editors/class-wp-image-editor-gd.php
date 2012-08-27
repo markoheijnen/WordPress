@@ -2,6 +2,7 @@
 
 class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	private $image = false;
+	private $dest_image = false;
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -44,7 +45,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	public function resize( $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
+	function get_resource() {
+		return $this->image;
+	}
+
+	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ! $this->load() )
 			return;
 
@@ -52,18 +57,73 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $dims )
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
+		$this->dest_size = array( 'width' => $dst_w, 'height' => $dst_h );
 
-		$newimage = wp_imagecreatetruecolor( $dst_w, $dst_h );
+		$this->dest_image = wp_imagecreatetruecolor( $dst_w, $dst_h );
 
-		imagecopyresampled( $newimage, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
+		imagecopyresampled( $this->dest_image, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
+	}
+
+
+	/**
+	 * Ported from image-edit.php
+	 * 
+	 * @TODO: Is it better to destroy current,
+	 *		  then set $image to new -- or copy, then destroy old?
+	 *		  It seems like with the first method, we may end up with
+	 *		  an extra copy of the image, because I don't believe they function
+	 *		  like pointers, even though we wish they were.
+	 * @param type $angle
+	 * @return boolean 
+	 */
+	public function rotate( $angle ) {
+		if ( function_exists('imagerotate') ) {
+			$rotated = imagerotate( $this->image, $angle, 0 );
+
+			if ( is_resource( $rotated ) ) {
+				imagedestroy( $this->image ); 
+				$this->image = $rotated;
+				return true;
+			}
+		}
+		return false; // @TODO: WP_Error here.
+	}
+
+	/**
+	 *Ported from image-edit.php
+	 * @param type $horz
+	 * @param type $vert 
+	 */
+	public function flip( $horz, $vert ) {
+		$w = $size['width'];
+		$h = $size['height'];
+		$dst = wp_imagecreatetruecolor( $w, $h );
+
+		if ( is_resource( $dst ) ) {
+			$sx = $vert ? ($w - 1) : 0;
+			$sy = $horz ? ($h - 1) : 0;
+			$sw = $vert ? -$w : $w;
+			$sh = $horz ? -$h : $h;
+
+			if ( imagecopyresampled( $dst, $img, 0, 0, $sx, $sy, $w, $h, $sw, $sh ) ) {
+				imagedestroy( $this->image );
+				$this->image = $dst;
+			}
+		}
+		return false; // @TODO: WP_Error here.
+	}
+
+	public function save( $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
+		if ( ! is_resource( $this->dest_image ) )
+			return new WP_Error( 'no_dst_image', __( 'No action performed' ) );
 
 		// convert from full colors to index colors, like original PNG.
 		if ( IMAGETYPE_PNG == $this->orig_type && function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
-			imagetruecolortopalette( $newimage, false, imagecolorstotal( $this->image ) );
+			imagetruecolortopalette( $this->dest_image, false, imagecolorstotal( $this->image ) );
 
 		// $suffix will be appended to the destination filename, just before the extension
 		if ( ! $suffix )
-			$suffix = "{$dst_w}x{$dst_h}";
+			$suffix = "{$this->dest_size['width']}x{$this->dest_size['height']}";
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
@@ -72,14 +132,15 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
 			$dir = $_dest_path;
+
 		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
 
 		if ( IMAGETYPE_GIF == $this->orig_type ) {
-			if ( ! imagegif( $newimage, $destfilename ) )
+			if ( ! imagegif( $this->dest_image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
-			if ( !imagepng( $newimage, $destfilename ) )
+			if ( !imagepng( $this->dest_image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		else {
@@ -87,11 +148,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if ( 'jpg' != $ext && 'jpeg' != $ext )
 				$destfilename = "{$dir}/{$name}-{$suffix}.jpg";
 
-			if ( ! imagejpeg( $newimage, $destfilename, apply_filters( 'jpeg_quality', $jpeg_quality, 'image_resize' ) ) )
+			if ( ! imagejpeg( $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $jpeg_quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 
-		imagedestroy( $newimage );
+		imagedestroy( $this->dest_image );
 
 		// Set correct file permissions
 		$stat = stat( dirname( $destfilename ) );
@@ -101,8 +162,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return array(
 			'path' => $destfilename,
 			'file' => wp_basename(  apply_filters( 'image_make_intermediate_size', $destfilename ) ),
-			'width' => $dst_w,
-			'height' => $dst_h
+			'width' => $this->dest_size['width'],
+			'height' => $this->dest_size['height']
 		);
 	}
 }

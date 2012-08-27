@@ -3222,8 +3222,8 @@ function wp_load_image( $file ) {
 	if ( is_numeric( $file ) )
 		$file = get_attached_file( $file );
 
-	$editor = new WP_Image_Editor_GD;
-	$editor->load( $file );
+	$editor = new WP_Image_Editor_GD( $file );
+	return $editor->get_resource();
 }
 
 /**
@@ -3253,6 +3253,8 @@ function wp_load_image( $file ) {
 function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
 	_deprecated_function( __FUNCTION__, '3.5', 'wp_get_image_for_editing()' );
 
-	$editor = new WP_Image_Editor_GD;
-	$editor->resize( $file, $max_w, $max_h, $crop, $suffix, $dest_path, $jpeg_quality );
+	$editor = new WP_Image_Editor_GD( $file );
+	$editor->resize( $max_w, $max_h, $crop );
+	$editor->save( $suffix, $dest_path, $jpeg_quality );
+	unset( $editor );
 }
