@@ -136,11 +136,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
 
 		if ( IMAGETYPE_GIF == $this->orig_type ) {
-			if ( ! imagegif( $this->dest_image, $destfilename ) )
+			if ( ! $this->make_image( 'imagegif', $this->dest_image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
-			if ( !imagepng( $this->dest_image, $destfilename ) )
+			if ( ! $this->make_image( 'imagepng', $this->dest_image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		else {
@@ -148,7 +148,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if ( 'jpg' != $ext && 'jpeg' != $ext )
 				$destfilename = "{$dir}/{$name}-{$suffix}.jpg";
 
-			if ( ! imagejpeg( $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
+			if ( ! ! $this->make_image( 'imagejpeg', $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 
@@ -165,5 +165,34 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			'width' => $this->dest_size['width'],
 			'height' => $this->dest_size['height']
 		);
+	}
+
+	private make_image( $function, $image, $filename, $quality = -1, $filters = null ) { 
+		$dst_file = $filename;
+
+		if ( $stream = wp_is_stream( $filename ) ) {
+			$filename = null;
+			ob_start();
+		}
+
+		$result = call_user_func( $function, $image, $filename, $quality, $filters );
+
+		if( $result && $stream ) {
+			$contents = ob_get_contents();
+
+			$fp = fopen( $dst_file, 'w' );
+
+			if( ! $fp )
+				return false;
+
+				fwrite( $fp, $contents );
+				fclose( $fp );
+			}
+
+			if( $stream ) {
+				ob_end_clean();
+			}
+
+		return $result;
 	}
 }
