@@ -56,7 +56,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $dims )
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
-		$this->dest_size = array( 'width' => $dst_w, 'height' => $dst_h );
 
 		$resized = wp_imagecreatetruecolor( $dst_w, $dst_h );
 		imagecopyresampled( $resized, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
@@ -64,6 +63,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( is_resource( $resized ) ) {
 			imagedestroy( $this->image ); 
 			$this->image = $resized;
+			$this->size = array( 'width' => $dst_w, 'height' => $dst_h );
+
 			return true;
 		}
 	}
@@ -124,7 +125,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		// $suffix will be appended to the destination filename, just before the extension
 		if ( ! $suffix )
-			$suffix = "{$this->dest_size['width']}x{$this->dest_size['height']}";
+			$suffix = "{$this->size['width']}x{$this->size['height']}";
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
@@ -161,8 +162,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return array(
 			'path' => $destfilename,
 			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
-			'width' => $this->dest_size['width'],
-			'height' => $this->dest_size['height']
+			'width' => $this->size['width'],
+			'height' => $this->size['height']
 		);
 	}
 

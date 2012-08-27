@@ -6,8 +6,6 @@ class WP_Image_Editor_Base {
 	protected $orig_type  = false;
 	protected $quality = 90;
 
-	protected $dest_size = false;
-
 	function __construct( $filename ) {
 		$this->file = $filename;
 	}
