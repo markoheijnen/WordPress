@@ -2,7 +2,6 @@
 
 class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	private $image = false;
-	private $dest_image = false;
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -59,9 +58,14 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
 		$this->dest_size = array( 'width' => $dst_w, 'height' => $dst_h );
 
-		$this->dest_image = wp_imagecreatetruecolor( $dst_w, $dst_h );
+		$resized = wp_imagecreatetruecolor( $dst_w, $dst_h );
+		imagecopyresampled( $resized, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
 
-		imagecopyresampled( $this->dest_image, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
+		if ( is_resource( $resized ) ) {
+			imagedestroy( $this->image ); 
+			$this->image = $resized;
+			return true;
+		}
 	}
 
 
@@ -114,12 +118,9 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	public function save( $suffix = null, $dest_path = null ) {
-		if ( ! is_resource( $this->dest_image ) )
-			return new WP_Error( 'no_dst_image', __( 'No action performed' ) );
-
 		// convert from full colors to index colors, like original PNG.
 		if ( IMAGETYPE_PNG == $this->orig_type && function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
-			imagetruecolortopalette( $this->dest_image, false, imagecolorstotal( $this->image ) );
+			imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
 
 		// $suffix will be appended to the destination filename, just before the extension
 		if ( ! $suffix )
@@ -136,11 +137,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
 
 		if ( IMAGETYPE_GIF == $this->orig_type ) {
-			if ( ! $this->make_image( 'imagegif', $this->dest_image, $destfilename ) )
+			if ( ! $this->make_image( 'imagegif', $this->image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
-			if ( ! $this->make_image( 'imagepng', $this->dest_image, $destfilename ) )
+			if ( ! $this->make_image( 'imagepng', $this->image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		else {
@@ -148,11 +149,9 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if ( 'jpg' != $ext && 'jpeg' != $ext )
 				$destfilename = "{$dir}/{$name}-{$suffix}.jpg";
 
-			if ( ! ! $this->make_image( 'imagejpeg', $this->dest_image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
+			if ( ! ! $this->make_image( 'imagejpeg', $this->image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
-
-		imagedestroy( $this->dest_image );
 
 		// Set correct file permissions
 		$stat = stat( dirname( $destfilename ) );
