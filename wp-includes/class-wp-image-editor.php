@@ -23,7 +23,7 @@ class WP_Image_Editor {
 		static $implementation;
 
 		if ( null === $implementation ) {
-			$request_order = apply_filters( 'wp_editors', array( 'imagick', 'gd' ) );
+			$request_order = apply_filters( 'wp_editors', array( 'gd' ) ); //'imagick',
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
 			foreach ( $request_order as $editor ) {
