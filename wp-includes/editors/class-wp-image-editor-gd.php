@@ -144,7 +144,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	/**
-	 *Ported from image-edit.php
+	 * Ported from image-edit.php
+	 *
 	 * @param type $horz
 	 * @param type $vert 
 	 */
@@ -176,15 +177,15 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return;
 
-		if( null == $destfilename ) {
+		if ( null == $destfilename ) {
 			$destfilename = $this->generate_filename();
 		}
 
-		if ( IMAGETYPE_GIF == $this->orig_type ) {
+		if ( 'image/gif' == $this->orig_type ) {
 			if ( ! $this->make_image( 'imagegif', $this->image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
-		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
+		elseif ( 'image/png' == $this->orig_type ) {
 			// convert from full colors to index colors, like original PNG.
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $this->image ) )
 				imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
