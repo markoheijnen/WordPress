@@ -34,7 +34,7 @@ class WP_Image_Editor_Base {
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
 			$dir = $_dest_path;
 
-		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
+		return "{$dir}/{$name}-{$suffix}.{$ext}";
 	}
 
 	public function get_suffix() {
