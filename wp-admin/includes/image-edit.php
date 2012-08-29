@@ -205,6 +205,8 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 		$image->stream();
 
     } else {
+		_deprecated_argument( __FUNCTION__, '3.5', __( '$img needs to be an WP_Image_Editor object' ) );
+
 		switch ( $mime_type ) {
 		    case 'image/jpeg':
 			    header( 'Content-Type: image/jpeg' );
@@ -312,6 +314,8 @@ function _crop_image_resource($img, $x, $y, $w, $h) {
  * @return GD Image
  */
 function image_edit_apply_changes($img, $changes) {
+	if ( is_resource( $img ) )
+		_deprecated_argument( __FUNCTION__, '3.5', __( '$img needs to be an WP_Image_Editor object' ) );
 
 	if ( !is_array($changes) )
 		return $img;
