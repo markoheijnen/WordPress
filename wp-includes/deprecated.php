@@ -3269,6 +3269,6 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	$editor->set_quality( $jpeg_quality );
 
 	$editor->resize( $max_w, $max_h, $crop );
-	$editor->save( $suffix, $dest_path );
+	$editor->save( $editor->generate_filename( $suffix, $dest_path ) );
 	unset( $editor );
 }
