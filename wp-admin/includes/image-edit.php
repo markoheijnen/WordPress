@@ -240,7 +240,7 @@ function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
 		return $saved;
 
 	if ( ! is_resource( $image ) ) {
-		$image->save( $filename );
+		return $image->save( $filename );
 	} else {
 		switch ( $mime_type ) {
 			case 'image/jpeg':
@@ -304,17 +304,13 @@ function _crop_image_resource($img, $x, $y, $w, $h) {
 }
 
 /**
- * @TODO: Returns GD resource, and IS public =(
- * In this case, it's actually a useful function, because it allows
- * combinations of operations to apply at once.
- * Not sure how we plan to do this on the WP_Image_Editor class, but if we
- * don't handle it, chances are that we'll significantly reduce performance.
+ * Performs group of changes on Editor specified.
  *
  * @param WP_Image_Editor $img
  * @param type $changes
  * @return GD Image
  */
-function image_edit_apply_changes($img, $changes) {
+function image_edit_apply_changes( $img, $changes ) {
 	if ( is_resource( $img ) )
 		_deprecated_argument( __FUNCTION__, '3.5', __( '$img needs to be an WP_Image_Editor object' ) );
 
@@ -521,7 +517,7 @@ function wp_save_image( $post_id ) {
 	$success = $delete = $scaled = $nocrop = false;
 	$post = get_post( $post_id );
 
-	$img = new WP_Image_Editor( _load_image_to_edit_path( $attachment_id, 'full' ) );
+	$img = WP_Image_Editor::get_instance( _load_image_to_edit_path( $post_id, 'full' ) );
 	if ( !$img ) {
 		$return->error = esc_js( __('Unable to create new image.') );
 		return $return;
@@ -601,11 +597,6 @@ function wp_save_image( $post_id ) {
 		return $return;
 	}
 
-	/*if ( !$image->save($new_path, $img, $post->post_mime_type, $post_id) ) {
-		$return->error = esc_js( __('Unable to save the image.') );
-		return $return;
-	}*/
-
 	if ( 'nothumb' == $target || 'all' == $target || 'full' == $target || $scaled ) {
 		$tag = false;
 		if ( isset($backup_sizes['full-orig']) ) {
@@ -622,7 +613,9 @@ function wp_save_image( $post_id ) {
 
 		$meta['file'] = _wp_relative_upload_path( $new_path );
 
-		list( $meta['width'], $meta['height'] ) = $img->get_size();
+		$size = $img->get_size();
+		$meta['width'] = $size['width'];
+		$meta['height'] = $size['height'];
 
 		list ( $uwidth, $uheight ) = wp_constrain_dimensions($meta['width'], $meta['height'], 128, 96);
 		$meta['hwstring_small'] = "height='$uheight' width='$uwidth'";
