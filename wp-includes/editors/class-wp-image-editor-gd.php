@@ -38,7 +38,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $size )
 			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
 
-		$this->size = array( 'width' => $size[0], 'height' => $size[1] );
+		$this->update_size( $size[0], $size[1] );
 		$this->orig_type = $size['mime'];
 
 		return true;
