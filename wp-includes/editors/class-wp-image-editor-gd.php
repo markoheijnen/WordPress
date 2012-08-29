@@ -48,7 +48,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return;
 
-		return $this->size;
+		return parent::get_size();
 	}
 
 	protected function update_size( $width = false, $height = false ) {
