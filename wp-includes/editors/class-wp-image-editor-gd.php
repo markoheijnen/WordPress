@@ -138,10 +138,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return;
 
-		// convert from full colors to index colors, like original PNG.
-		if ( IMAGETYPE_PNG == $this->orig_type && function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
-			imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
-
 		// $suffix will be appended to the destination filename, just before the extension
 		if ( ! $suffix )
 			$suffix = "{$this->size['width']}x{$this->size['height']}";
@@ -161,6 +157,10 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
+			// convert from full colors to index colors, like original PNG.
+			if ( function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
+				imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
+
 			if ( ! $this->make_image( 'imagepng', $this->image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
