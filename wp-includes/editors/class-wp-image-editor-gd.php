@@ -194,8 +194,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 		else {
 			// all other formats are converted to jpg
-			if ( 'jpg' != $ext && 'jpeg' != $ext )
-				$destfilename = "{$dir}/{$name}-{$suffix}.jpg";
+			$destfilename = preg_replace( '/\\.[^\\.]+$/', '.jpg', $destfilename );
 
 			if ( ! ! $this->make_image( 'imagejpeg', $this->image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
