@@ -29,6 +29,7 @@ function wp_create_thumbnail( $file, $max_side, $deprecated = '' ) {
 
 /**
  * Crop an Image to a given size.
+ * @TODO: Port to WP_Image_Editor
  *
  * @since 2.1.0
  *

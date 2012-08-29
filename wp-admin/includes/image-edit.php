@@ -225,10 +225,7 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 
 /**
  * @TODO: Public function that accepts GD images as input.
- * In some of these cases, should we just check what class the input is?
- * In this particular case, the mime_type shouldn't be THAT important for
- * WP_Image_Editor, since it stores this anyway.  However, we might want a way
- * to allow conversions of images through WP_Image_Editor for plugins.
+ * @TODO: Add mime_type support to WP_Image_Editor
  *
  * @param string $filename
  * @param type $image
@@ -236,21 +233,25 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
  * @param type $post_id
  * @return boolean
  */
-function wp_save_image_file($filename, $image, $mime_type, $post_id) {
+function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
 	$image = apply_filters('image_save_pre', $image, $post_id);
 	$saved = apply_filters('wp_save_image_file', null, $filename, $image, $mime_type, $post_id);
 	if ( null !== $saved )
 		return $saved;
 
-	switch ( $mime_type ) {
-		case 'image/jpeg':
-			return imagejpeg( $image, $filename, apply_filters( 'jpeg_quality', 90, 'edit_image' ) );
-		case 'image/png':
-			return imagepng($image, $filename);
-		case 'image/gif':
-			return imagegif($image, $filename);
-		default:
-			return false;
+	if ( ! is_resource( $image ) ) {
+		$image->save( $filename );
+	} else {
+		switch ( $mime_type ) {
+			case 'image/jpeg':
+				return imagejpeg( $image, $filename, apply_filters( 'jpeg_quality', 90, 'edit_image' ) );
+			case 'image/png':
+				return imagepng( $image, $filename );
+			case 'image/gif':
+				return imagegif( $image, $filename );
+			default:
+				return false;
+		}
 	}
 }
 

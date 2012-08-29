@@ -81,6 +81,44 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 	}
 
+	/**
+	 * Ported from image.php
+	 *
+	 * @param type $x
+	 * @param type $y
+	 * @param type $w
+	 * @param type $h
+	 * @return boolean
+	 */
+	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
+		if ( ! $this->load() )
+			return;
+
+		// If destination width/height isn't specified, use same as
+		// width/height from source.
+		$dst_w = $dst_w ?: $src_w;
+		$dst_h = $dst_h ?: $src_h;
+		$dst = wp_imagecreatetruecolor( $dst_w, $dst_h );
+
+		if ( $src_abs ) {
+			$src_w -= $src_x;
+			$src_h -= $src_y;
+		}
+
+		if ( function_exists( 'imageantialias' ) )
+			imageantialias( $dst, true );
+
+		imagecopyresampled( $dst, $this->image, 0, 0, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
+
+		if ( is_resource( $dst ) ) {
+			imagedestroy( $this->image );
+			$this->image = $dst;
+			$this->update_size( $dst_w, $dst_h );
+			return true;
+		}
+
+		return false; // @TODO: WP_Error here.
+	}
 
 	/**
 	 * Ported from image-edit.php
