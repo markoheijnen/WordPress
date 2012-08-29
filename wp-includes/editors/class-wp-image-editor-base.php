@@ -15,7 +15,6 @@ class WP_Image_Editor_Base {
 	}
 
 	public function get_size() {
-		// refresh from file or stored image in memory.            
 		return $this->size;
 	}
 

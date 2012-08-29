@@ -18,7 +18,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	private function load() {
-		if( $this->image ) 
+		if ( $this->image )
 			return true;
 
 		if ( ! file_exists( $this->file ) )
@@ -39,9 +39,26 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
 
 		$this->size = array( 'width' => $size[0], 'height' => $size[1] );
-		$this->orig_type = $size[2];
+		$this->orig_type = $size['mime'];
 
 		return true;
+	}
+
+	public function get_size() {
+		if ( ! $this->load() )
+			return;
+
+		return $this->size;
+	}
+
+	protected function update_size( $width = false, $height = false ) {
+		if ( ! $this->load() )
+			return;
+
+		$this->size = array(
+			'width' => $width ?: imagesx( $this->image ),
+			'height' => $height ?: imagesy($this->image)
+		);
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
@@ -59,8 +76,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( is_resource( $resized ) ) {
 			imagedestroy( $this->image ); 
 			$this->image = $resized;
-			$this->size = array( 'width' => $dst_w, 'height' => $dst_h );
-
+			$this->update_size( $dst_w, $dst_h );
 			return true;
 		}
 	}
@@ -68,22 +84,21 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 	/**
 	 * Ported from image-edit.php
-	 * 
-	 * @TODO: Is it better to destroy current,
-	 *		  then set $image to new -- or copy, then destroy old?
-	 *		  It seems like with the first method, we may end up with
-	 *		  an extra copy of the image, because I don't believe they function
-	 *		  like pointers, even though we wish they were.
-	 * @param type $angle
+	 *
+	 * @param float $angle
 	 * @return boolean 
 	 */
 	public function rotate( $angle ) {
+		if ( ! $this->load() )
+			return;
+
 		if ( function_exists('imagerotate') ) {
 			$rotated = imagerotate( $this->image, $angle, 0 );
 
 			if ( is_resource( $rotated ) ) {
 				imagedestroy( $this->image ); 
 				$this->image = $rotated;
+				$this->update_size();
 				return true;
 			}
 		}
@@ -96,8 +111,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	 * @param type $vert 
 	 */
 	public function flip( $horz, $vert ) {
-		$w = $size['width'];
-		$h = $size['height'];
+		if ( ! $this->load() )
+			return;
+
+		$w = $this->size['width'];
+		$h = $this->size['height'];
 		$dst = wp_imagecreatetruecolor( $w, $h );
 
 		if ( is_resource( $dst ) ) {
@@ -106,15 +124,20 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			$sw = $vert ? -$w : $w;
 			$sh = $horz ? -$h : $h;
 
-			if ( imagecopyresampled( $dst, $img, 0, 0, $sx, $sy, $w, $h, $sw, $sh ) ) {
+			if ( imagecopyresampled( $dst, $this->image, 0, 0, $sx, $sy, $w, $h, $sw, $sh ) ) {
 				imagedestroy( $this->image );
 				$this->image = $dst;
+				return true;
 			}
 		}
+
 		return false; // @TODO: WP_Error here.
 	}
 
 	public function save( $suffix = null, $dest_path = null ) {
+		if ( ! $this->load() )
+			return;
+
 		// convert from full colors to index colors, like original PNG.
 		if ( IMAGETYPE_PNG == $this->orig_type && function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
 			imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
@@ -163,7 +186,29 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		);
 	}
 
-	private make_image( $function, $image, $filename, $quality = -1, $filters = null ) { 
+	/**
+	 * Returns stream of current image
+	 */
+	public function stream() {
+		if ( ! $this->load() )
+			return;
+
+		switch ( $this->orig_type ) {
+			case 'image/jpeg':
+				header('Content-Type: image/jpeg');
+				return imagejpeg($this->image, null, 90);
+			case 'image/png':
+				header('Content-Type: image/png');
+				return imagepng($this->image);
+			case 'image/gif':
+				header('Content-Type: image/gif');
+				return imagegif($this->image);
+			default:
+				return false;
+		}
+	}
+
+	private function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
 		$dst_file = $filename;
 
 		if ( $stream = wp_is_stream( $filename ) ) {
