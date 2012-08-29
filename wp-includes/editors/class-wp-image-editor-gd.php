@@ -134,23 +134,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return false; // @TODO: WP_Error here.
 	}
 
-	public function save( $suffix = null, $dest_path = null ) {
+	public function save( $destfilename = null ) {
 		if ( ! $this->load() )
 			return;
 
-		// $suffix will be appended to the destination filename, just before the extension
-		if ( ! $suffix )
-			$suffix = "{$this->size['width']}x{$this->size['height']}";
-
-		$info = pathinfo( $this->file );
-		$dir  = $info['dirname'];
-		$ext  = $info['extension'];
-		$name = wp_basename( $this->file, ".$ext" );
-
-		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
-			$dir = $_dest_path;
-
-		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
+		if( null == $destfilename ) {
+			$destfilename = $this->generate_filename();
+		}
 
 		if ( IMAGETYPE_GIF == $this->orig_type ) {
 			if ( ! $this->make_image( 'imagegif', $this->image, $destfilename ) )
@@ -158,7 +148,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 		elseif ( IMAGETYPE_PNG == $this->orig_type ) {
 			// convert from full colors to index colors, like original PNG.
-			if ( function_exists('imageistruecolor') && !imageistruecolor( $this->image ) )
+			if ( function_exists('imageistruecolor') && ! imageistruecolor( $this->image ) )
 				imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
 
 			if ( ! $this->make_image( 'imagepng', $this->image, $destfilename ) )
