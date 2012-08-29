@@ -57,7 +57,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		$this->size = array(
 			'width' => $width ?: imagesx( $this->image ),
-			'height' => $height ?: imagesy($this->image)
+			'height' => $height ?: imagesy( $this->image )
 		);
 	}
 
