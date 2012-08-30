@@ -891,12 +891,7 @@ function get_header_image() {
 	if ( is_random_header_image() )
 		$url = get_random_header_image();
 
-	if ( is_ssl() )
-		$url = str_replace( 'http://', 'https://', $url );
-	else
-		$url = str_replace( 'https://', 'http://', $url );
-
-	return esc_url_raw( $url );
+	return esc_url_raw( set_url_scheme( $url ) );
 }
 
 /**
@@ -1125,7 +1120,7 @@ function background_color() {
  */
 function _custom_background_cb() {
 	// $background is the saved custom image, or the default image.
-	$background = get_background_image();
+	$background = set_url_scheme( get_background_image() );
 
 	// $color is the saved custom color.
 	// A default has to be specified in style.css. It will not be printed here.

@@ -475,19 +475,46 @@ final class WP_Post {
 		if ( 'ancestors' == $key )
 			return true;
 
+		if ( 'page_template' == $key )
+			return ( 'page' == $this->post_type );
+
+		if ( 'post_category' == $key )
+		   return true;
+
+		if ( 'tags_input' == $key )
+		   return true;
+
 		return metadata_exists( 'post', $this->ID, $key );
 	}
 
-	public function &__get( $key ) {
-		if ( 'ancestors' == $key ) {
-			$value = get_post_ancestors( $this );
-		} else {
-			$value = get_post_meta( $this->ID, $key, true );
+	public function __get( $key ) {
+		if ( 'page_template' == $key && $this->__isset( $key ) ) {
+			return get_post_meta( $this->ID, '_wp_page_template', true );
 		}
 
-		if ( $this->filter ) {
-			$value = sanitize_post_field( $key, $value, $this->ID, $this->filter );
+		if ( 'post_category' == $key ) {
+			if ( is_object_in_taxonomy( $this->post_type, 'category' ) )
+				return wp_get_post_categories( $this->ID );
+			else
+				return array();
 		}
+
+		if ( 'tags_input' == $key ) {
+			if ( is_object_in_taxonomy( $this->post_type, 'post_tag' ) )
+				return wp_get_post_tags( $this->ID, array( 'fields' => 'names' ) );
+			else
+				return array();
+		}
+
+		// Rest of the values need filtering
+
+		if ( 'ancestors' == $key )
+			$value = get_post_ancestors( $this );
+		else
+			$value = get_post_meta( $this->ID, $key, true );
+
+		if ( $this->filter )
+			$value = sanitize_post_field( $key, $value, $this->ID, $this->filter );
 
 		return $value;
 	}
@@ -504,7 +531,11 @@ final class WP_Post {
 
 	public function to_array() {
 		$post = get_object_vars( $this );
-		$post['ancestors'] = array();
+
+		foreach ( array( 'ancestors', 'page_template', 'post_category', 'tags_input' ) as $key ) {
+			if ( $this->__isset( $key ) )
+				$post[ $key ] = $this->__get( $key );
+		}
 
 		return $post;
 	}
@@ -2226,7 +2257,7 @@ function wp_trash_post($post_id = 0) {
 	if ( !EMPTY_TRASH_DAYS )
 		return wp_delete_post($post_id, true);
 
-	if ( !$post = wp_get_single_post($post_id, ARRAY_A) )
+	if ( !$post = get_post($post_id, ARRAY_A) )
 		return $post;
 
 	if ( $post['post_status'] == 'trash' )
@@ -2258,7 +2289,7 @@ function wp_trash_post($post_id = 0) {
  * @return mixed False on failure
  */
 function wp_untrash_post($post_id = 0) {
-	if ( !$post = wp_get_single_post($post_id, ARRAY_A) )
+	if ( !$post = get_post($post_id, ARRAY_A) )
 		return $post;
 
 	if ( $post['post_status'] != 'trash' )
@@ -2486,49 +2517,6 @@ function wp_get_recent_posts( $args = array(), $output = ARRAY_A ) {
 
 	return $results ? $results : false;
 
-}
-
-/**
- * Retrieve a single post, based on post ID.
- *
- * Has categories in 'post_category' property or key. Has tags in 'tags_input'
- * property or key.
- *
- * @since 1.0.0
- *
- * @param int $postid Post ID.
- * @param string $mode How to return result, either OBJECT, ARRAY_N, or ARRAY_A.
- * @return WP_Post|array WP_Post object or array holding post contents and information
- */
-function wp_get_single_post($postid = 0, $mode = OBJECT) {
-	$postid = (int) $postid;
-
-	$post = get_post($postid, $mode);
-
-	if (
-		( OBJECT == $mode && empty( $post->ID ) ) ||
-		( OBJECT != $mode && empty( $post['ID'] ) )
-	)
-		return ( OBJECT == $mode ? null : array() );
-
-	// Set categories and tags
-	if ( $mode == OBJECT ) {
-		$post->post_category = array();
-		if ( is_object_in_taxonomy($post->post_type, 'category') )
-			$post->post_category = wp_get_post_categories($postid);
-		$post->tags_input = array();
-		if ( is_object_in_taxonomy($post->post_type, 'post_tag') )
-			$post->tags_input = wp_get_post_tags($postid, array('fields' => 'names'));
-	} else {
-		$post['post_category'] = array();
-		if ( is_object_in_taxonomy($post['post_type'], 'category') )
-			$post['post_category'] = wp_get_post_categories($postid);
-		$post['tags_input'] = array();
-		if ( is_object_in_taxonomy($post['post_type'], 'post_tag') )
-			$post['tags_input'] = wp_get_post_tags($postid, array('fields' => 'names'));
-	}
-
-	return $post;
 }
 
 /**
@@ -2832,7 +2820,7 @@ function wp_update_post( $postarr = array(), $wp_error = false ) {
 	}
 
 	// First, get all of the original fields
-	$post = wp_get_single_post($postarr['ID'], ARRAY_A);
+	$post = get_post($postarr['ID'], ARRAY_A);
 
 	// Escape data pulled from DB.
 	$post = add_magic_quotes($post);
@@ -3241,7 +3229,7 @@ function get_to_ping($post_id) {
 function trackback_url_list($tb_list, $post_id) {
 	if ( ! empty( $tb_list ) ) {
 		// get post data
-		$postdata = wp_get_single_post($post_id, ARRAY_A);
+		$postdata = get_post($post_id, ARRAY_A);
 
 		// import postdata as variables
 		extract($postdata, EXTR_SKIP);
@@ -4517,9 +4505,6 @@ function clean_post_cache( $post ) {
 			clean_post_cache( $child );
 		}
 	}
-
-	if ( is_multisite() )
-		wp_cache_delete( $wpdb->blogid . '-' . $post->ID, 'global-posts' );
 }
 
 /**

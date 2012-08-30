@@ -4,7 +4,7 @@ Theme URI: http://wordpress.org/extend/themes/twentytwelve
 Author: the WordPress team
 Author URI: http://wordpress.org/
 Description: The 2012 theme for WordPress is a fully responsive theme that looks great on any device. Features include a homepage template with a its own widgets, an optional display font, styling for post formats on both index and single views, and an optional no-sidebar page template. Make it yours with a custom menu, header image, and background.
-Version: 0.7
+Version: 0.9
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tags: light, gray, white, one-column, two-columns, right-sidebar, flexible-width, custom-background, custom-header, custom-menu, editor-style, featured-images, flexible-header, full-width-template, microformats, post-formats, rtl-language-support, sticky-post, theme-options, translation-ready
@@ -157,7 +157,6 @@ img {
 }
 
 /* Clearing floats */
-
 .clear:after {
 	clear: both;
 }
@@ -262,6 +261,8 @@ li.bypostauthor cite span {
 /* Form fields */
 input[type="text"],
 input[type="password"],
+input[type="email"],
+input[type="url"],
 textarea {
 	padding: 6px;
 	padding: 0.428571429rem;
@@ -295,6 +296,9 @@ iframe,
 object,
 video {
 	max-width: 100%;
+}
+.entry-content .twitter-tweet-rendered {
+	max-width: 100% !important; /* Override the Twitter embed fixed width */
 }
 
 /* Images */
@@ -332,7 +336,7 @@ img.wp-post-image {
 	line-height: 2;
 	color: #777;
 }
-.wp-smiley,
+img.wp-smiley,
 .rsswidget img {
 	border: 0;
 	border-radius: 0;
@@ -433,9 +437,12 @@ html {
 body {
 	font-size: 14px;
 	font-size: 1rem;
-	font-family: "Open Sans", Helvetica, Arial, sans-serif;
+	font-family: Helvetica, Arial, sans-serif;
 	text-rendering: optimizeLegibility;
 	color: #444;
+}
+body.custom-font-enabled {
+	font-family: "Open Sans", Helvetica, Arial, sans-serif;
 }
 a {
 	outline: none;
@@ -513,17 +520,12 @@ a:hover {
 	margin-top: 1.714285714rem;
 	text-align: center;
 }
-.main-navigation li ul ul {
-	margin-left: 40px;
-	margin-left: 2.857142857rem;
-}
 .main-navigation li {
 	margin-top: 24px;
 	margin-top: 1.714285714rem;
 	font-size: 12px;
 	font-size: 0.857142857rem;
 	line-height: 1.42857143;
-	float: none;
 }
 .main-navigation a {
 	color: #5e5e5e;
@@ -531,9 +533,11 @@ a:hover {
 .main-navigation a:hover {
 	color: #21759b;
 }
-.main-navigation .menu {
+.main-navigation ul.nav-menu,
+.main-navigation div.nav-menu > ul {
 	display: none;
 }
+.main-navigation ul.nav-menu.toggled-on,
 .menu-toggle {
 	display: inline-block;
 }
@@ -561,7 +565,8 @@ section[role="banner"] {
 	margin-bottom: 1.714285714rem;
 }
 .widget-area .widget p,
-.widget-area .widget li {
+.widget-area .widget li,
+.widget-area .widget .textwidget {
 	font-size: 13px;
 	font-size: 0.928571429rem;
 	line-height: 1.846153846;
@@ -577,6 +582,9 @@ section[role="banner"] {
 footer[role="contentinfo"] {
 	border-top: 1px solid #ededed;
 	clear: both;
+	font-size: 12px;
+	font-size: 0.857142857rem;
+	line-height: 2;
 	max-width: 960px;
 	max-width: 68.571428571rem;
 	margin-top: 24px;
@@ -588,9 +596,6 @@ footer[role="contentinfo"] {
 	overflow: hidden;
 }
 footer[role="contentinfo"] a {
-	font-size: 12px;
-	font-size: 0.857142857rem;
-	line-height: 2;
 	color: #686868;
 }
 footer[role="contentinfo"] a:hover {
@@ -1196,11 +1201,11 @@ label ~ span.required {
 	margin-bottom: 14px;
 	margin-bottom: 1rem;
 }
-.page-template-homepage-php .site-content article {
+.template-home .site-content article {
 	border: 0;
 	margin-bottom: 0;
 }
-.page-template-homepage-php .widget-area {
+.template-home .widget-area {
 	clear: both;
 	float: none;
 	width: auto;
@@ -1208,7 +1213,7 @@ label ~ span.required {
 	padding-top: 1.714285714rem;
 	border-top: 1px solid #ededed;
 }
-.page-template-homepage-php .widget-area .widget li {
+.template-home .widget-area .widget li {
 	margin: 8px 0 0;
 	margin: 0.571428571rem 0 0;
 	font-size: 13px;
@@ -1217,13 +1222,13 @@ label ~ span.required {
 	list-style-type: square;
 	list-style-position: inside;
 }
-.page-template-homepage-php .widget-area .widget li a {
+.template-home .widget-area .widget li a {
 	color: #777;
 }
-.page-template-homepage-php .widget-area .widget li a:hover {
+.template-home .widget-area .widget li a:hover {
 	color: #21759b;
 }
-.page-template-homepage-php .widget-area .widget_text img {
+.template-home .widget-area .widget_text img {
 	float: left;
 	margin: 8px 24px 8px 0;
 	margin: 0.571428571rem 1.714285714rem 0.571428571rem 0;
@@ -1299,7 +1304,7 @@ img#wpstats {
 @media screen and (min-width: 600px) {
 	.entry-content p,
 	.entry-summary p {
-		text-align: left;
+		text-align: inherit;
 		text-justify: auto;
 	}
 	#author-avatar {
@@ -1321,8 +1326,7 @@ img#wpstats {
 		float: left;
 		width: 65.104166667%;
 	}
-	body.page-template-full-width-page-php .site-content,
-	body.page-template-homepage-php .site-content,
+	body.template-home .site-content,
 	body.single-attachment .site-content,
 	body.full-width .site-content {
 		width: 100%;
@@ -1340,7 +1344,8 @@ img#wpstats {
 		font-size: 1.857142857rem;
 		line-height: 1.846153846;
 	}
-	.main-navigation .menu {
+	.main-navigation ul.nav-menu,
+	.main-navigation div.nav-menu > ul {
 		border-bottom: 1px solid #ededed;
 		border-top: 1px solid #ededed;
 		display: inline-block !important;
@@ -1353,16 +1358,15 @@ img#wpstats {
 		margin: 0;
 		text-indent: 0;
 	}
-	.main-navigation li ul li {
-		padding-left: 0;
-	}
 	.main-navigation li a,
 	.main-navigation li {
 		display: inline-block;
 		text-decoration: none;
 	}
 	.main-navigation li a {
+		border-bottom: 0;
 		color: #6a6a6a;
+		line-height: 3.692307692;
 		text-transform: uppercase;
 	}
 	.main-navigation li a:hover {
@@ -1373,10 +1377,6 @@ img#wpstats {
 		margin: 0 2.857142857rem 0 0;
 		position: relative;
 	}
-	.main-navigation li a {
-		border-bottom: 0;
-		line-height: 3.692307692;
-	}
 	.main-navigation li ul {
 		display: none;
 		margin: 0;
@@ -1386,7 +1386,6 @@ img#wpstats {
 		z-index: 1;
 	}
 	.main-navigation li ul ul {
-		margin-left: 0;
 		top: 0;
 		left: 100%;
 	}
@@ -1430,11 +1429,11 @@ img#wpstats {
 	#respond form textarea.blog-textarea {
 		width: 79.666666667%;
 	}
-	.page-template-homepage-php .site-content,
-	.page-template-homepage-php article {
+	.template-home .site-content,
+	.template-home article {
 		overflow: hidden;
 	}
-	.page-template-homepage-php.has-post-thumbnail article {
+	.template-home.has-post-thumbnail article {
 		float: left;
 		width: 47.916666667%;
 	}
@@ -1443,25 +1442,25 @@ img#wpstats {
 		margin-bottom: 0;
 		width: 47.916666667%;
 	}
-	.page-template-homepage-php .widget-area .widget,
-	.page-template-homepage-php .widget-area.two .home-widgets {
+	.template-home .widget-area .widget,
+	.template-home .widget-area.two .home-widgets {
 		float: left;
 		width: 51.875%;
 		margin-bottom: 24px;
 		margin-bottom: 1.714285714rem;
 	}
-	.page-template-homepage-php .widget-area .widget:nth-child(odd) {
+	.template-home .widget-area .widget:nth-child(odd) {
 		clear: right;
 	}
-	.page-template-homepage-php .widget-area .widget:nth-child(even),
-	.page-template-homepage-php .widget-area.two .home-widgets + .home-widgets {
+	.template-home .widget-area .widget:nth-child(even),
+	.template-home .widget-area.two .home-widgets + .home-widgets {
 		float: right;
 		width: 39.0625%;
 		margin: 0 0 24px;
 		margin: 0 0 1.714285714rem;
 	}
-	.page-template-homepage-php .widget-area.two .widget,
-	.page-template-homepage-php .widget-area.two .widget:nth-child(even) {
+	.template-home .widget-area.two .widget,
+	.template-home .widget-area.two .widget:nth-child(even) {
 		float: none;
 		width: auto;
 	}
@@ -1548,7 +1547,7 @@ img#wpstats {
 	.site-content nav,
 	.widget-area,
 	img.header-image,
-	nav.site-navigation {
+	.main-navigation {
 		display: none;
 	}
 	.wrapper {

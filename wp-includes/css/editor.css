@@ -1047,6 +1047,8 @@
 
 .wp-editor-container textarea.wp-editor-area {
 	width: 99.9%;
+	-webkit-box-shadow: none;
+	box-shadow: none;
 }
 
 .quicktags-toolbar,
@@ -2033,7 +2035,7 @@ RTL
 	border-width: 1px;
 	border-top-left-radius: 0;
 	border-top-right-radius: 3px;
-	border-bottom-right-left: 0;
+	border-bottom-left-radius: 0;
 	border-bottom-right-radius: 3px;
 }
 

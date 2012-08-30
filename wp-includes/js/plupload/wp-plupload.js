@@ -11,7 +11,7 @@ if ( typeof wp === 'undefined' )
 	 * An object that helps create a WordPress uploader using plupload.
 	 *
 	 * @param options - object - The options passed to the new plupload instance.
-	 *    Requires the following parameters:
+	 *    Accepts the following parameters:
 	 *    - container - The id of uploader container.
 	 *    - browser   - The id of button to trigger the file select.
 	 *    - dropzone  - The id of file drop target.
@@ -86,8 +86,7 @@ if ( typeof wp === 'undefined' )
 
 		// Generate drag/drop helper classes.
 		(function( dropzone, supported ) {
-			var sensitivity = 50,
-				active;
+			var timer, active;
 
 			if ( ! dropzone )
 				return;
@@ -100,6 +99,9 @@ if ( typeof wp === 'undefined' )
 			// 'dragenter' doesn't fire correctly,
 			// simulate it with a limited 'dragover'
 			dropzone.bind( 'dragover.wp-uploader', function(){
+				if ( timer )
+					clearTimeout( timer );
+
 				if ( active )
 					return;
 
@@ -108,8 +110,15 @@ if ( typeof wp === 'undefined' )
 			});
 
 			dropzone.bind('dragleave.wp-uploader, drop.wp-uploader', function(){
-				active = false;
-				dropzone.removeClass('drag-over');
+				// Using an instant timer prevents the drag-over class from
+				// being quickly removed and re-added when elements inside the
+				// dropzone are repositioned.
+				//
+				// See http://core.trac.wordpress.org/ticket/21705
+				timer = setTimeout( function() {
+					active = false;
+					dropzone.removeClass('drag-over');
+				}, 0 );
 			});
 		}( this.dropzone, this.supports.dragdrop ));
 
@@ -121,7 +130,9 @@ if ( typeof wp === 'undefined' )
 			$('#' + this.uploader.id + '_html5_container').hide();
 		}
 
-		this.uploader.bind( 'UploadProgress', this.progress );
+		this.uploader.bind( 'UploadProgress', function( up, file ) {
+			self.progress( file );
+		});
 
 		this.uploader.bind( 'FileUploaded', function( up, file, response ) {
 			try {
@@ -134,10 +145,10 @@ if ( typeof wp === 'undefined' )
 				return self.error( pluploadL10n.default_error );
 
 			if ( 'error' === response.type )
-				return self.error( response.data.message, response.data );
+				return self.error( response.data.message, response.data, file );
 
 			if ( 'success' === response.type )
-				return self.success( response.data );
+				return self.success( response.data, file );
 
 		});
 
@@ -153,7 +164,7 @@ if ( typeof wp === 'undefined' )
 				}
 			}
 
-			self.error( message, error );
+			self.error( message, error, error.file );
 			up.refresh();
 		});
 

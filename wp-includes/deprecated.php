@@ -3205,7 +3205,6 @@ function _get_post_ancestors( &$post ) {
 	_deprecated_function( __FUNCTION__, '3.5' );
 }
 
-
 /**
  * Load an image from a string, if PHP supports it.
  *
@@ -3272,3 +3271,23 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	$editor->save( $editor->generate_filename( $suffix, $dest_path ) );
 	unset( $editor );
 }
+
+/**
+ * Retrieve a single post, based on post ID.
+ *
+ * Has categories in 'post_category' property or key. Has tags in 'tags_input'
+ * property or key.
+ *
+ * @since 1.0.0
+ * @deprecated 3.5.0
+ * @see get_post()
+ *
+ * @param int $postid Post ID.
+ * @param string $mode How to return result, either OBJECT, ARRAY_N, or ARRAY_A.
+ * @return object|array Post object or array holding post contents and information
+ */
+function wp_get_single_post( $postid = 0, $mode = OBJECT ) {
+	_deprecated_function( __FUNCTION__, '3.5', 'get_post()' );
+	return get_post( $postid, $mode, 'edit' );
+}
+

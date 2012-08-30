@@ -623,7 +623,7 @@ function get_term_feed_link( $term_id, $taxonomy = 'category', $feed = '' ) {
 	if ( 'category' == $taxonomy )
 		$link = apply_filters( 'category_feed_link', $link, $feed );
 	elseif ( 'post_tag' == $taxonomy )
-		$link = apply_filters( 'category_feed_link', $link, $feed );
+		$link = apply_filters( 'tag_feed_link', $link, $feed );
 	else
 		$link = apply_filters( 'taxonomy_feed_link', $link, $feed, $taxonomy );
 
@@ -1175,14 +1175,21 @@ function get_adjacent_post( $in_same_cat = false, $excluded_categories = '', $pr
 	$query = "SELECT p.* FROM $wpdb->posts AS p $join $where $sort";
 	$query_key = 'adjacent_post_' . md5($query);
 	$result = wp_cache_get($query_key, 'counts');
-	if ( false !== $result )
+	if ( false !== $result ) {
+		if ( is_object( $result ) )
+			$result = new WP_Post( $result );
 		return $result;
+	}
 
 	$result = $wpdb->get_row("SELECT p.* FROM $wpdb->posts AS p $join $where $sort");
 	if ( null === $result )
 		$result = '';
 
 	wp_cache_set($query_key, $result, 'counts');
+
+	if ( is_object( $result ) )
+		$result = new WP_Post( $result );
+
 	return $result;
 }
 
@@ -2042,9 +2049,7 @@ function includes_url($path = '') {
  * @return string Content url link with optional path appended.
 */
 function content_url($path = '') {
-	$url = WP_CONTENT_URL;
-	if ( 0 === strpos($url, 'http') && is_ssl() )
-		$url = str_replace( 'http://', 'https://', $url );
+	$url = set_url_scheme( WP_CONTENT_URL );
 
 	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
 		$url .= '/' . ltrim($path, '/');
@@ -2076,8 +2081,8 @@ function plugins_url($path = '', $plugin = '') {
 	else
 		$url = WP_PLUGIN_URL;
 
-	if ( 0 === strpos($url, 'http') && is_ssl() )
-		$url = str_replace( 'http://', 'https://', $url );
+	
+	$url = set_url_scheme( $url );
 
 	if ( !empty($plugin) && is_string($plugin) ) {
 		$folder = dirname(plugin_basename($plugin));
