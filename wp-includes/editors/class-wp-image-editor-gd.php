@@ -2,7 +2,6 @@
 
 class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	private $image = false;
-	private $auto_resizing = false;
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -60,6 +59,19 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
+		$resized = $this->_resize( $max_w, $max_h, $crop );
+
+		if ( $resized ) {
+			imagedestroy( $this->image ); 
+			$this->image = $resized;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	private function _resize( $max_w, $max_h, $crop = false ) {
 		if ( ! $this->load() )
 			return;
 
@@ -74,29 +86,21 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		if ( is_resource( $resized ) ) {
 			$this->update_size( $dst_w, $dst_h );
-
-			if( true == $this->auto_resizing ) {
-				return $resized;
-			}
-
-			imagedestroy( $this->image ); 
-			$this->image = $resized;
-
-			return true;
+			return $resized;
 		}
+
+		return false;
 	}
 
 	public function multi_resize( $sizes ) {
 		$metadata = array();
-		$this->auto_resizing = true;
-
 		if ( ! $this->load() )
 			return $metadata;
 
 		foreach ( $sizes as $size => $size_data ) {
 			$this->restore_size();
 
-			$image = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+			$image = $this->_resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $image ) ) {
 				$resized = $this->_save( $image );
@@ -108,8 +112,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 					$metadata[$size] = $resized;
 			}
 		}
-
-		$this->auto_resizing = false;
 
 		return $metadata;
 	}
@@ -207,13 +209,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	public function save( $destfilename = null ) {
-		if ( ! $this->load() )
-			return;
-
 		return $this->_save( $this->image, $destfilename );
 	}
 
-	public function _save( $image, $destfilename = null ) {
+	private function _save( $image, $destfilename = null ) {
+		if ( ! $this->load() )
+			return;
+
 		if ( null == $destfilename ) {
 			$destfilename = $this->generate_filename();
 		}
