@@ -236,6 +236,20 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 	}
 
+	public function generate_filename( $suffix = null, $dest_path = null ) {
+		if ( ! $this->load() )
+			return;
+
+		return parent::generate_filename( $suffix, $dest_path );
+	}
+
+	public function get_suffix() {
+		if ( ! $this->load() )
+			return;
+
+		return parent::get_suffix();
+	}
+
 	private function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
 		$dst_file = $filename;
 

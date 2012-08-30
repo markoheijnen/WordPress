@@ -38,6 +38,9 @@ class WP_Image_Editor_Base {
 	}
 
 	public function get_suffix() {
+		if ( ! $this->get_size() )
+			return;
+
 		return "{$this->size['width']}x{$this->size['height']}";
 	}
 }
