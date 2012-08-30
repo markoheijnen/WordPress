@@ -205,7 +205,7 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 		$image->stream();
 
     } else {
-		_deprecated_argument( __FUNCTION__, '3.5', __( '$img needs to be an WP_Image_Editor object' ) );
+		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
 
 		switch ( $mime_type ) {
 		    case 'image/jpeg':
@@ -242,6 +242,8 @@ function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
 	if ( ! is_resource( $image ) ) {
 		return $image->save( $filename );
 	} else {
+		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
+
 		switch ( $mime_type ) {
 			case 'image/jpeg':
 				return imagejpeg( $image, $filename, apply_filters( 'jpeg_quality', 90, 'edit_image' ) );
@@ -306,16 +308,16 @@ function _crop_image_resource($img, $x, $y, $w, $h) {
 /**
  * Performs group of changes on Editor specified.
  *
- * @param WP_Image_Editor $img
+ * @param WP_Image_Editor $image
  * @param type $changes
  * @return GD Image
  */
-function image_edit_apply_changes( $img, $changes ) {
-	if ( is_resource( $img ) )
-		_deprecated_argument( __FUNCTION__, '3.5', __( '$img needs to be an WP_Image_Editor object' ) );
+function image_edit_apply_changes( $image, $changes ) {
+	if ( is_resource( $image ) )
+		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
 
 	if ( !is_array($changes) )
-		return $img;
+		return $image;
 
 	// expand change operations
 	foreach ( $changes as $key => $obj ) {
@@ -360,43 +362,43 @@ function image_edit_apply_changes( $img, $changes ) {
 	}
 
 	// image resource before applying the changes
-	$img = apply_filters('image_edit_before_change', $img, $changes);
+	$image = apply_filters('image_edit_before_change', $image, $changes);
 	foreach ( $changes as $operation ) {
 		switch ( $operation->type ) {
 			case 'rotate':
 				if ( $operation->angle != 0 ) {
-					if ( ! is_resource( $img ) )
-						$img->rotate( $operation->angle );
+					if ( ! is_resource( $image ) )
+						$image->rotate( $operation->angle );
 					else
-						$img = _rotate_image_resource($img, $operation->angle);
+						$image = _rotate_image_resource( $image, $operation->angle );
 				}
 				break;
 			case 'flip':
 				if ( $operation->axis != 0 )
-					if ( ! is_resource( $img ) )
-						$img->flip( ($operation->axis & 1) != 0, ($operation->axis & 2) != 0 );
+					if ( ! is_resource( $image ) )
+						$image->flip( ($operation->axis & 1) != 0, ($operation->axis & 2) != 0 );
 					else
-						$img = _flip_image_resource($img, ($operation->axis & 1) != 0, ($operation->axis & 2) != 0);
+						$image = _flip_image_resource( $image, ( $operation->axis & 1 ) != 0, ( $operation->axis & 2 ) != 0 );
 				break;
 			case 'crop':
 				$sel = $operation->sel;
 
-				if ( ! is_resource( $img ) ) {
-					$size = $img->get_size();
+				if ( ! is_resource( $image ) ) {
+					$size = $image->get_size();
 					$w = $size['width'];
 					$h = $size['height'];
 
 					$scale = 1 / _image_get_preview_ratio( $w, $h ); // discard preview scaling
-					$img->crop( $sel->x * $scale, $sel->y * $scale, $sel->w * $scale, $sel->h * $scale );
+					$image->crop( $sel->x * $scale, $sel->y * $scale, $sel->w * $scale, $sel->h * $scale );
 				} else {
-					$scale = 1 / _image_get_preview_ratio( imagesx($img), imagesy($img) ); // discard preview scaling
-					$img = _crop_image_resource($img, $sel->x * $scale, $sel->y * $scale, $sel->w * $scale, $sel->h * $scale);
+					$scale = 1 / _image_get_preview_ratio( imagesx( $image ), imagesy( $image ) ); // discard preview scaling
+					$image = _crop_image_resource( $image, $sel->x * $scale, $sel->y * $scale, $sel->w * $scale, $sel->h * $scale );
 				}
 				break;
 		}
 	}
 
-	return $img;
+	return $image;
 }
 
 
