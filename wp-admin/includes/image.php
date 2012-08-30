@@ -117,16 +117,7 @@ function wp_generate_attachment_metadata( $attachment_id, $file ) {
 		$sizes = apply_filters( 'intermediate_image_sizes_advanced', $sizes );
 
 		$editor = WP_Image_Editor::get_instance( $file );
-
-		foreach ($sizes as $size => $size_data ) {
-			$editor->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
-			$resized = $editor->save();
-			unset( $resized['path'] );
-
-			if ( ! is_wp_error( $resized ) && $resized )
-				$metadata['sizes'][$size] = $resized;
-		}
-
+		$metadata['sizes'] = $editor->multi_resize( $sizes );
 		unset( $editor );
 
 		// fetch additional metadata from exif/iptc

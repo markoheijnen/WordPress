@@ -2,6 +2,7 @@
 
 class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	private $image = false;
+	private $auto_resizing = false;
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -55,10 +56,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return;
 
-		$this->size = array(
-			'width' => $width ?: imagesx( $this->image ),
-			'height' => $height ?: imagesy( $this->image )
-		);
+		parent::update_size( $width ?: imagesx( $this->image ), $height ?: imagesy( $this->image ) );
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
@@ -66,19 +64,54 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			return;
 
 		$dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
-		if ( ! $dims )
+		if ( ! $dims ) {
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
+		}
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
 
 		$resized = wp_imagecreatetruecolor( $dst_w, $dst_h );
 		imagecopyresampled( $resized, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
 
 		if ( is_resource( $resized ) ) {
+			$this->update_size( $dst_w, $dst_h );
+
+			if( true == $this->auto_resizing ) {
+				return $resized;
+			}
+
 			imagedestroy( $this->image ); 
 			$this->image = $resized;
-			$this->update_size( $dst_w, $dst_h );
+
 			return true;
 		}
+	}
+
+	public function multi_resize( $sizes ) {
+		$metadata = array();
+		$this->auto_resizing = true;
+
+		if ( ! $this->load() )
+			return $metadata;
+
+		foreach ( $sizes as $size => $size_data ) {
+			$this->restore_size();
+
+			$image = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+
+			if( ! is_wp_error( $image ) ) {
+				$resized = $this->_save( $image );
+
+				imagedestroy( $image ); 
+				unset( $resized['path'] );
+
+				if ( ! is_wp_error( $resized ) && $resized )
+					$metadata[$size] = $resized;
+			}
+		}
+
+		$this->auto_resizing = false;
+
+		return $metadata;
 	}
 
 	/**
@@ -177,27 +210,31 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return;
 
+		return $this->_save( $this->image, $destfilename );
+	}
+
+	public function _save( $image, $destfilename = null ) {
 		if ( null == $destfilename ) {
 			$destfilename = $this->generate_filename();
 		}
 
 		if ( 'image/gif' == $this->orig_type ) {
-			if ( ! $this->make_image( 'imagegif', $this->image, $destfilename ) )
+			if ( ! $this->make_image( 'imagegif', $image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		elseif ( 'image/png' == $this->orig_type ) {
 			// convert from full colors to index colors, like original PNG.
-			if ( function_exists('imageistruecolor') && ! imageistruecolor( $this->image ) )
-				imagetruecolortopalette( $this->image, false, imagecolorstotal( $this->image ) );
+			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
+				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
-			if ( ! $this->make_image( 'imagepng', $this->image, $destfilename ) )
+			if ( ! $this->make_image( 'imagepng', $image, $destfilename ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 		else {
 			// all other formats are converted to jpg
 			$destfilename = preg_replace( '/\\.[^\\.]+$/', '.jpg', $destfilename );
 
-			if ( ! $this->make_image( 'imagejpeg', $this->image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
+			if ( ! $this->make_image( 'imagejpeg', $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
 		}
 
