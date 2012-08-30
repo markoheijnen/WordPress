@@ -61,17 +61,17 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	public function resize( $max_w, $max_h, $crop = false ) {
 		$resized = $this->_resize( $max_w, $max_h, $crop );
 
-		if ( $resized ) {
+		if ( is_resource( $resized ) ) {
 			imagedestroy( $this->image ); 
 			$this->image = $resized;
 
 			return true;
 		}
 
-		return false;
+		return $resized;
 	}
 
-	private function _resize( $max_w, $max_h, $crop = false ) {
+	private function _resize( $max_w, $max_h, $crop ) {
 		if ( ! $this->load() )
 			return;
 
