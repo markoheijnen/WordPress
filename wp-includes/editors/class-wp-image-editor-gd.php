@@ -307,13 +307,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if( ! $fp )
 				return false;
 
-				fwrite( $fp, $contents );
-				fclose( $fp );
-			}
+			fwrite( $fp, $contents );
+			fclose( $fp );
+		}
 
-			if( $stream ) {
-				ob_end_clean();
-			}
+		if( $stream ) {
+			ob_end_clean();
+		}
 
 		return $result;
 	}
