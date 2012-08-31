@@ -10,6 +10,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 	}
 
+	/**
+	 * Checks to see if GD is available.
+	 *
+	 * @return boolean 
+	 */
 	public static function test() {
 		if ( ! extension_loaded('gd') || ! function_exists('gd_info') )
 			return false;
@@ -18,7 +23,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	/**
-	 * Loads image from $this->file
+	 * Loads image from $this->file into GD Resource
 	 * 
 	 * @since 3.5
 	 * 
@@ -99,12 +104,20 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return false;
 	}
 
+	/**
+	 * Processes current image and saves to disk
+	 * multiple sizes from single source.
+	 *
+	 * @param array $sizes
+	 * @return array
+	 */
 	public function multi_resize( $sizes ) {
 		$metadata = array();
 		if ( ! $this->load() )
 			return $metadata;
 
 		foreach ( $sizes as $size => $size_data ) {
+			$orig_size = $this->size;
 			$image = $this->_resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $image ) ) {
@@ -116,6 +129,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 				if ( ! is_wp_error( $resized ) && $resized )
 					$metadata[$size] = $resized;
 			}
+
+			$this->size = $orig_size;
 		}
 
 		return $metadata;
@@ -124,10 +139,10 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	/**
 	 * Ported from image.php
 	 *
-	 * @param type $x
-	 * @param type $y
-	 * @param type $w
-	 * @param type $h
+	 * @param float $x
+	 * @param float $y
+	 * @param float $w
+	 * @param float $h
 	 * @return boolean
 	 */
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
@@ -186,8 +201,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	/**
 	 * Ported from image-edit.php
 	 *
-	 * @param type $horz
-	 * @param type $vert 
+	 * @param boolean $horz
+	 * @param boolean $vert
 	 */
 	public function flip( $horz, $vert ) {
 		if ( ! $this->load() )
@@ -213,8 +228,19 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return false; // @TODO: WP_Error here.
 	}
 
+	/**
+	 * Saves current in-memory image to file
+	 *
+	 * @param string $destfilename
+	 * @return array
+	 */
 	public function save( $destfilename = null ) {
-		return $this->_save( $this->image, $destfilename );
+		$saved = $this->_save( $this->image, $destfilename );
+
+		if ( ! is_wp_error( $saved ) && $destfilename )
+			$this->file = $destfilename;
+
+		return $saved;
 	}
 
 	protected function _save( $image, $destfilename = null ) {

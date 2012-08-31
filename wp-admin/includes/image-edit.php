@@ -197,7 +197,15 @@ function wp_image_editor($post_id, $msg = false) {
 <?php
 }
 
-// @TODO: Public Function accepts GD image as input
+/**
+ * Streams image in WP_Image_Editor to browser.
+ * Provided for backcompat reasons
+ *
+ * @param WP_Image_Editor $image
+ * @param string $mime_type
+ * @param int $post_id
+ * @return boolean
+ */
 function wp_stream_image( $image, $mime_type, $post_id ) {
 	$image = apply_filters('image_editor_save_pre', $image, $post_id);
 
@@ -230,9 +238,9 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
  * @TODO: Add mime_type support to WP_Image_Editor
  *
  * @param string $filename
- * @param type $image
- * @param type $mime_type
- * @param type $post_id
+ * @param WP_Image_Editor $image
+ * @param string $mime_type
+ * @param int $post_id
  * @return boolean
  */
 function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
@@ -283,7 +291,16 @@ function _rotate_image_resource($img, $angle) {
 	return $img;
 }
 
-// @TODO: Returns GD resource, but is NOT public
+/**
+ * @TODO: Only used within image_edit_apply_changes
+ *		  and receives/returns GD Resource.
+ *		  Consider removal.
+ *
+ * @param GD_Resource $img
+ * @param boolean $horz
+ * @param boolean $vert
+ * @return GD_Resource
+ */
 function _flip_image_resource($img, $horz, $vert) {
 	$w = imagesx($img);
 	$h = imagesy($img);
@@ -302,7 +319,18 @@ function _flip_image_resource($img, $horz, $vert) {
 	return $img;
 }
 
-// @TODO: Returns GD resource, but is NOT public
+/**
+ * @TODO: Only used within image_edit_apply_changes
+ *		  and receives/returns GD Resource.
+ *		  Consider removal.
+ *
+ * @param GD_Resource $img
+ * @param float $x
+ * @param float $y
+ * @param float $w
+ * @param float $h
+ * @return GD_Resource
+ */
 function _crop_image_resource($img, $x, $y, $w, $h) {
 	$dst = wp_imagecreatetruecolor($w, $h);
 	if ( is_resource($dst) ) {
@@ -416,7 +444,8 @@ function image_edit_apply_changes( $image, $changes ) {
 
 
 /**
- * Streams image in $post_id to browser
+ * Streams image in post to browser, along with enqueued changes
+ * in $_REQUEST['history']
  *
  * @param int $post_id
  * @return boolean
@@ -524,10 +553,10 @@ function wp_restore_image($post_id) {
 }
 
 /**
- * Doesn't return or accept GD Image resources, but does a ton of manip
- * using it.
+ * Saves image to post along with enqueued changes
+ * in $_REQUEST['history']
  *
- * @param type $post_id
+ * @param int $post_id
  * @return \stdClass
  */
 function wp_save_image( $post_id ) {
