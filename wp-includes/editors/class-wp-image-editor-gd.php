@@ -1,7 +1,7 @@
 <?php
 
 class WP_Image_Editor_GD extends WP_Image_Editor_Base {
-	private $image = false;
+	private $image = false; // GD Resource
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -17,6 +17,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return true;
 	}
 
+	/**
+	 * Loads image from $this->file
+	 * 
+	 * @since 3.5
+	 * 
+	 * @return boolean|\WP_Error 
+	 */
 	private function load() {
 		if ( $this->image )
 			return true;
@@ -71,7 +78,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return $resized;
 	}
 
-	private function _resize( $max_w, $max_h, $crop ) {
+	protected function _resize( $max_w, $max_h, $crop ) {
 		if ( ! $this->load() )
 			return;
 
@@ -98,8 +105,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			return $metadata;
 
 		foreach ( $sizes as $size => $size_data ) {
-			$this->restore_size();
-
 			$image = $this->_resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $image ) ) {
@@ -212,7 +217,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return $this->_save( $this->image, $destfilename );
 	}
 
-	private function _save( $image, $destfilename = null ) {
+	protected function _save( $image, $destfilename = null ) {
 		if ( ! $this->load() )
 			return;
 
@@ -222,7 +227,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 		if ( 'image/gif' == $this->orig_type ) {
 			if ( ! $this->make_image( 'imagegif', $image, $destfilename ) )
-				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
+				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		elseif ( 'image/png' == $this->orig_type ) {
 			// convert from full colors to index colors, like original PNG.
@@ -230,14 +235,14 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
 			if ( ! $this->make_image( 'imagepng', $image, $destfilename ) )
-				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
+				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		else {
 			// all other formats are converted to jpg
 			$destfilename = preg_replace( '/\\.[^\\.]+$/', '.jpg', $destfilename );
 
 			if ( ! $this->make_image( 'imagejpeg', $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
-				return new WP_Error( 'resize_path_invalid', __( 'Resize path invalid' ) );
+				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 
 		// Set correct file permissions

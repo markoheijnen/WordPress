@@ -199,13 +199,15 @@ function wp_image_editor($post_id, $msg = false) {
 
 // @TODO: Public Function accepts GD image as input
 function wp_stream_image( $image, $mime_type, $post_id ) {
-	$image = apply_filters('image_save_pre', $image, $post_id);
+	$image = apply_filters('image_editor_save_pre', $image, $post_id);
 
 	if ( ! is_resource( $image ) ) {
 		$image->stream();
 
     } else {
 		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
+
+		$image = apply_filters('image_save_pre', $image, $post_id);
 
 		switch ( $mime_type ) {
 		    case 'image/jpeg':
@@ -234,15 +236,22 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
  * @return boolean
  */
 function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
-	$image = apply_filters('image_save_pre', $image, $post_id);
-	$saved = apply_filters('wp_save_image_file', null, $filename, $image, $mime_type, $post_id);
-	if ( null !== $saved )
-		return $saved;
-
 	if ( ! is_resource( $image ) ) {
+		$image = apply_filters('image_editor_save_pre', $image, $post_id);
+		$saved = apply_filters('wp_save_image_editor_file', null, $filename, $image, $mime_type, $post_id);
+
+		if ( null !== $saved )
+			return $saved;
+
 		return $image->save( $filename );
 	} else {
 		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
+
+		$image = apply_filters('image_save_pre', $image, $post_id);
+		$saved = apply_filters('wp_save_image_file', null, $filename, $image, $mime_type, $post_id);
+
+		if ( null !== $saved )
+			return $saved;
 
 		switch ( $mime_type ) {
 			case 'image/jpeg':
@@ -362,7 +371,11 @@ function image_edit_apply_changes( $image, $changes ) {
 	}
 
 	// image resource before applying the changes
-	$image = apply_filters('image_edit_before_change', $image, $changes);
+	if ( ! is_resource( $image ) )
+		$image = apply_filters('wp_image_editor_before_change', $image, $changes);
+	else
+		$image = apply_filters('image_edit_before_change', $image, $changes);
+
 	foreach ( $changes as $operation ) {
 		switch ( $operation->type ) {
 			case 'rotate':
@@ -403,7 +416,10 @@ function image_edit_apply_changes( $image, $changes ) {
 
 
 /**
- * @TODO: Get this abstracted so that it can work with ImagicK.
+ * Streams image in $post_id to browser
+ *
+ * @param int $post_id
+ * @return boolean
  */
 function stream_preview_image($post_id) {
 	$post = get_post($post_id);
