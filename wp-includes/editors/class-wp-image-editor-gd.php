@@ -238,9 +238,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		else {
-			// all other formats are converted to jpg
-			$destfilename = preg_replace( '/\\.[^\\.]+$/', '.jpg', $destfilename );
-
 			if ( ! $this->make_image( 'imagejpeg', $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
