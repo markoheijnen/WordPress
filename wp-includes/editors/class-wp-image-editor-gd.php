@@ -116,8 +116,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		if ( ! $this->load() )
 			return $metadata;
 
+		$orig_size = $this->size;
 		foreach ( $sizes as $size => $size_data ) {
-			$orig_size = $this->size;
 			$image = $this->_resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $image ) ) {
