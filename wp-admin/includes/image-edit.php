@@ -636,6 +636,8 @@ function wp_save_image( $post_id ) {
 	}
 
 	if ( isset( $sizes ) ) {
+		$_sizes = array();
+
 		foreach ( $sizes as $size ) {
 			$tag = false;
 			if ( isset( $meta['sizes'][$size] ) ) {
@@ -651,14 +653,14 @@ function wp_save_image( $post_id ) {
 			}
 
 			$crop = $nocrop ? false : get_option("{$size}_crop");
-			$resized = image_make_intermediate_size( $new_path, get_option("{$size}_size_w"), get_option("{$size}_size_h"), $crop );
-
-			if ( $resized )
-				$meta['sizes'][$size] = $resized;
-			else
-				unset( $meta['sizes'][$size] );
+			$_sizes[ $size ] = array( 'width' => get_option("{$size}_size_w"), 'height' => get_option("{$size}_size_h"), 'crop' => $crop );
 		}
+
+		$img->set_filename( $new_path );
+		$meta['sizes'] = $img->multi_resize( $_sizes );
 	}
+
+	unset( $img );
 
 	if ( $success ) {
 		wp_update_attachment_metadata( $post_id, $meta );

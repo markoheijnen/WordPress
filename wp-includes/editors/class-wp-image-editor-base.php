@@ -8,11 +8,15 @@ class WP_Image_Editor_Base {
 	protected $quality = 90;
 
 	function __construct( $filename ) {
-		$this->file = $filename;
+		$this->set_filename( $filename );
 	}
 
 	public static function test() {
 		return false;
+	}
+
+	public function set_filename( $filename ) {
+		$this->file = $filename;
 	}
 
 	public function get_size() {
