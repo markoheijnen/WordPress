@@ -384,9 +384,11 @@ function image_make_intermediate_size( $file, $width, $height, $crop = false ) {
 		$editor = WP_Image_Editor::get_instance( $file );
 		$editor->resize( $width, $height, $crop ); 
 		$resized_file = $editor->save();
+
 		unset( $editor ); 
 
-		if ( ! is_wp_error( $resized_file ) && $resized_file ) { 
+		if ( ! is_wp_error( $resized_file ) && $resized_file ) {
+			unset( $resized_file['path'] );
 			return $resized_file; 
 		}
 	}
