@@ -1292,20 +1292,20 @@ function wp_get_original_referer() {
  * @return bool Whether the path was created. True if path already exists.
  */
 function wp_mkdir_p( $target ) {
-	$wrapper = null; 
+	$wrapper = null;
 
-	// strip the protocol  
-	if( wp_is_stream( $target ) ) { 
-		list( $wrapper, $target ) = explode( '://', $target, 2 ); 
-	} 
+	// strip the protocol
+	if( wp_is_stream( $target ) ) {
+		list( $wrapper, $target ) = explode( '://', $target, 2 );
+	}
 
 	// from php.net/mkdir user contributed notes
 	$target = str_replace( '//', '/', $target );
 
-	// put the wrapper back on the target 
-	if( $wrapper !== null ) { 
-		$target = $wrapper . '://' . $target; 
-	} 
+	// put the wrapper back on the target
+	if( $wrapper !== null ) {
+		$target = $wrapper . '://' . $target;
+	}
 
 	// safe mode fails with a trailing slash under certain PHP versions.
 	$target = rtrim($target, '/'); // Use rtrim() instead of untrailingslashit to avoid formatting.php dependency.

@@ -13,7 +13,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	/**
 	 * Checks to see if GD is available.
 	 *
-	 * @return boolean 
+	 * @return boolean
 	 */
 	public static function test() {
 		if ( ! extension_loaded('gd') || ! function_exists('gd_info') )
@@ -24,10 +24,10 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 
 	/**
 	 * Loads image from $this->file into GD Resource
-	 * 
+	 *
 	 * @since 3.5
-	 * 
-	 * @return boolean|\WP_Error 
+	 *
+	 * @return boolean|\WP_Error
 	 */
 	private function load() {
 		if ( $this->image )
@@ -74,7 +74,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		$resized = $this->_resize( $max_w, $max_h, $crop );
 
 		if ( is_resource( $resized ) ) {
-			imagedestroy( $this->image ); 
+			imagedestroy( $this->image );
 			$this->image = $resized;
 
 			return true;
@@ -123,7 +123,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			if( ! is_wp_error( $image ) ) {
 				$resized = $this->_save( $image );
 
-				imagedestroy( $image ); 
+				imagedestroy( $image );
 				unset( $resized['path'] );
 
 				if ( ! is_wp_error( $resized ) && $resized )
@@ -176,10 +176,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	}
 
 	/**
+	 * Rotates in memory image by $angle.
 	 * Ported from image-edit.php
 	 *
 	 * @param float $angle
-	 * @return boolean 
+	 * @return boolean
 	 */
 	public function rotate( $angle ) {
 		if ( ! $this->load() )
@@ -189,7 +190,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			$rotated = imagerotate( $this->image, $angle, 0 );
 
 			if ( is_resource( $rotated ) ) {
-				imagedestroy( $this->image ); 
+				imagedestroy( $this->image );
 				$this->image = $rotated;
 				$this->update_size();
 				return true;
