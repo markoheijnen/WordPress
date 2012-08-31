@@ -3,7 +3,6 @@
 class WP_Image_Editor_Base {
 	protected $file = false;
 	protected $size = false;
-	protected $orig_size = false;
 	protected $orig_type  = false;
 	protected $quality = 90;
 
@@ -24,21 +23,10 @@ class WP_Image_Editor_Base {
 	}
 
 	protected function update_size( $width = false, $height = false ) {
-		if( ! $this->orig_size ) {
-			$this->orig_size = array(
-				'width' => $width,
-				'height' => $height
-			);
-		}
-
 		$this->size = array(
 			'width' => $width,
 			'height' => $height
 		);
-	}
-
-	protected function restore_size() {
-		$this->size = $this->orig_size;
 	}
 
 	public function set_quality( $quality ) {
