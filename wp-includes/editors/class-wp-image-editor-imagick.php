@@ -1,7 +1,7 @@
 <?php
 
 class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
-	private $image = false;
+	private $image = false; // Imagick Object
 
 	public static function test() {
 		if ( ! extension_loaded('imagick') )
@@ -25,7 +25,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			return sprintf(__('File &#8220;%s&#8221; is not an image.'), $this->file);
 		}
 
-		$this->size = $this->image->getImageGeometry();
+		$this->update_size();
 		$this->orig_type  = $this->image->getImageFormat();
 		if ( ! $this->size )
 			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
@@ -33,7 +33,24 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	public function resize( $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null ) {
+	protected function update_size( $width = false, $height = false ) {
+		if ( ! $this->load() )
+			return false;
+
+		$size = null;
+		if ( !$this->size || $width || $height ) {
+			try {
+				$size = $this->image->getImageFormat();
+			}
+			catch ( Exception $e ) {
+				return sprintf(__('File &#8220;%s&#8221; couldn\'t be checked for size.'), $this->file);
+			}
+		}
+
+		parent::update_size( $width ?: $size['height'], $height ?: $size['width'] );
+	}
+
+	public function resize( $max_w, $max_h, $crop = false ) {
 		// Yes, this is forcing a load every time at the moment.
 		// However, for multi-resize to work, it needs to do so, unless it's going to resize based on a modified image.
 		if ( ! $this->load() )
@@ -61,19 +78,30 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 
 		//$this->image->thumbnailImage( $dst_w, $dst_h );
 		$this->image->scaleImage( $dst_w, $dst_h, true );
+	}
 
-		// $suffix will be appended to the destination filename, just before the extension
-		if ( ! $suffix )
-			$suffix = "{$dst_w}x{$dst_h}";
+	/**
+	 * Saves current image to file
+	 *
+	 * @param string $destfilename
+	 * @return array
+	 */
+	public function save( $destfilename = null ) {
+		$saved = $this->_save( $this->image, $destfilename );
 
-		$info = pathinfo( $this->file );
-		$dir  = $info['dirname'];
-		$ext  = $info['extension'];
-		$name = wp_basename( $this->file, ".$ext" );
+		if ( ! is_wp_error( $saved ) && $destfilename )
+			$this->file = $destfilename;
 
-		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
-			$dir = $_dest_path;
-		$destfilename = "{$dir}/{$name}-{$suffix}.{$ext}";
+		return $saved;
+	}
+
+	protected function _save( $image, $destfilename = null ) {
+		if ( ! $this->load() )
+			return;
+
+		if ( null == $destfilename ) {
+			$destfilename = $this->generate_filename();
+		}
 
 		if( apply_filters( 'wp_editors_stripimage', true ) ) {
 			$this->image->stripImage();
@@ -89,8 +117,22 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		return array(
 			'path' => $destfilename,
 			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
-			'width' => $dst_w,
-			'height' => $dst_h
+			'width' => $this->size['width'],
+			'height' => $this->size['height']
 		);
+	}
+
+	public function generate_filename( $suffix = null, $dest_path = null ) {
+		if ( ! $this->load() )
+			return;
+
+		return parent::generate_filename( $suffix, $dest_path );
+	}
+
+	public function get_suffix() {
+		if ( ! $this->load() )
+			return;
+
+		return parent::get_suffix();
 	}
 }
