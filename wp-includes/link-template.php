@@ -54,11 +54,11 @@ function user_trailingslashit($string, $type_of_url = '') {
  *
  * @param string $mode Permalink mode can be either 'title', 'id', or default, which is 'id'.
  */
-function permalink_anchor($mode = 'id') {
-	global $post;
-	switch ( strtolower($mode) ) {
+function permalink_anchor( $mode = 'id' ) {
+	$post = get_post();
+	switch ( strtolower( $mode ) ) {
 		case 'title':
-			$title = sanitize_title($post->post_title) . '-' . $post->ID;
+			$title = sanitize_title( $post->post_title ) . '-' . $post->ID;
 			echo '<a id="'.$title.'"></a>';
 			break;
 		case 'id':
@@ -77,7 +77,7 @@ function permalink_anchor($mode = 'id') {
  * @param bool $leavename Optional, defaults to false. Whether to keep post name or page name.
  * @return string
  */
-function get_permalink($id = 0, $leavename = false) {
+function get_permalink( $id = 0, $leavename = false ) {
 	$rewritecode = array(
 		'%year%',
 		'%monthnum%',
@@ -232,24 +232,20 @@ function post_permalink( $post_id = 0, $deprecated = '' ) {
  *
  * @since 1.5.0
  *
- * @param int $id Optional. Post ID.
+ * @param mixed $post Optional. Post ID or object.
  * @param bool $leavename Optional, defaults to false. Whether to keep page name.
  * @param bool $sample Optional, defaults to false. Is it a sample permalink.
  * @return string
  */
-function get_page_link( $id = false, $leavename = false, $sample = false ) {
-	global $post;
+function get_page_link( $post = false, $leavename = false, $sample = false ) {
+	$post = get_post( $post );
 
-	$id = (int) $id;
-	if ( !$id )
-		$id = (int) $post->ID;
-
-	if ( 'page' == get_option('show_on_front') && $id == get_option('page_on_front') )
+	if ( 'page' == get_option( 'show_on_front' ) && $post->ID == get_option( 'page_on_front' ) )
 		$link = home_url('/');
 	else
-		$link = _get_page_link( $id , $leavename, $sample );
+		$link = _get_page_link( $post, $leavename, $sample );
 
-	return apply_filters('page_link', $link, $id, $sample);
+	return apply_filters( 'page_link', $link, $post->ID, $sample );
 }
 
 /**
@@ -260,15 +256,15 @@ function get_page_link( $id = false, $leavename = false, $sample = false ) {
  * @since 2.1.0
  * @access private
  *
- * @param int $id Optional. Post ID.
+ * @param mixed $post Optional. Post ID or object.
  * @param bool $leavename Optional. Leave name.
  * @param bool $sample Optional. Sample permalink.
  * @return string
  */
-function _get_page_link( $id = false, $leavename = false, $sample = false ) {
+function _get_page_link( $post = false, $leavename = false, $sample = false ) {
 	global $wp_rewrite;
 
-	$post = get_post( $id );
+	$post = get_post( $post );
 
 	$draft_or_pending = in_array( $post->post_status, array( 'draft', 'pending', 'auto-draft' ) );
 
@@ -276,16 +272,16 @@ function _get_page_link( $id = false, $leavename = false, $sample = false ) {
 
 	if ( !empty($link) && ( ( isset($post->post_status) && !$draft_or_pending ) || $sample ) ) {
 		if ( ! $leavename ) {
-			$link = str_replace('%pagename%', get_page_uri($id), $link);
+			$link = str_replace('%pagename%', get_page_uri( $post ), $link);
 		}
 
 		$link = home_url($link);
 		$link = user_trailingslashit($link, 'page');
 	} else {
-		$link = home_url("?page_id=$id");
+		$link = home_url( '?page_id=' . $post->ID );
 	}
 
-	return apply_filters( '_get_page_link', $link, $id );
+	return apply_filters( '_get_page_link', $link, $post->ID );
 }
 
 /**
@@ -295,38 +291,36 @@ function _get_page_link( $id = false, $leavename = false, $sample = false ) {
  *
  * @since 2.0.0
  *
- * @param int $id Optional. Post ID.
+ * @param mixed $post Optional. Post ID or object.
  * @return string
  */
-function get_attachment_link($id = false) {
-	global $post, $wp_rewrite;
+function get_attachment_link( $post = null ) {
+	global $wp_rewrite;
 
 	$link = false;
 
-	if ( ! $id)
-		$id = (int) $post->ID;
+	$post = get_post( $post );
 
-	$object = get_post($id);
-	if ( $wp_rewrite->using_permalinks() && ($object->post_parent > 0) && ($object->post_parent != $id) ) {
-		$parent = get_post($object->post_parent);
+	if ( $wp_rewrite->using_permalinks() && ( $post->post_parent > 0 ) && ( $post->post_parent != $post->ID ) ) {
+		$parent = get_post($post->post_parent);
 		if ( 'page' == $parent->post_type )
-			$parentlink = _get_page_link( $object->post_parent ); // Ignores page_on_front
+			$parentlink = _get_page_link( $post->post_parent ); // Ignores page_on_front
 		else
-			$parentlink = get_permalink( $object->post_parent );
+			$parentlink = get_permalink( $post->post_parent );
 
-		if ( is_numeric($object->post_name) || false !== strpos(get_option('permalink_structure'), '%category%') )
-			$name = 'attachment/' . $object->post_name; // <permalink>/<int>/ is paged so we use the explicit attachment marker
+		if ( is_numeric($post->post_name) || false !== strpos(get_option('permalink_structure'), '%category%') )
+			$name = 'attachment/' . $post->post_name; // <permalink>/<int>/ is paged so we use the explicit attachment marker
 		else
-			$name = $object->post_name;
+			$name = $post->post_name;
 
 		if ( strpos($parentlink, '?') === false )
 			$link = user_trailingslashit( trailingslashit($parentlink) . $name );
 	}
 
 	if ( ! $link )
-		$link = home_url( "/?attachment_id=$id" );
+		$link = home_url( '/?attachment_id=' . $post->ID );
 
-	return apply_filters('attachment_link', $link, $id);
+	return apply_filters( 'attachment_link', $link, $post->ID );
 }
 
 /**
@@ -895,7 +889,7 @@ function get_post_type_archive_feed_link( $post_type, $feed = '' ) {
  * @return string
  */
 function get_edit_post_link( $id = 0, $context = 'display' ) {
-	if ( !$post = get_post( $id ) )
+	if ( ! $post = get_post( $id ) )
 		return;
 
 	if ( 'display' == $context )
@@ -1122,9 +1116,9 @@ function get_next_post($in_same_cat = false, $excluded_categories = '') {
  * @return mixed Post object if successful. Null if global $post is not set. Empty string if no corresponding post exists.
  */
 function get_adjacent_post( $in_same_cat = false, $excluded_categories = '', $previous = true ) {
-	global $post, $wpdb;
+	global $wpdb;
 
-	if ( empty( $post ) )
+	if ( ! $post = get_post() )
 		return null;
 
 	$current_post_date = $post->post_date;
@@ -1207,10 +1201,10 @@ function get_adjacent_post( $in_same_cat = false, $excluded_categories = '', $pr
  * @return string
  */
 function get_adjacent_post_rel_link($title = '%title', $in_same_cat = false, $excluded_categories = '', $previous = true) {
-	if ( $previous && is_attachment() && is_object( $GLOBALS['post'] ) )
-		$post = get_post($GLOBALS['post']->post_parent);
+	if ( $previous && is_attachment() && $post = get_post() )
+		$post = get_post( $post->post_parent );
 	else
-		$post = get_adjacent_post($in_same_cat,$excluded_categories,$previous);
+		$post = get_adjacent_post( $in_same_cat, $excluded_categories, $previous );
 
 	if ( empty($post) )
 		return;
@@ -1299,9 +1293,8 @@ function prev_post_rel_link($title = '%title', $in_same_cat = false, $excluded_c
  * @return object
  */
 function get_boundary_post( $in_same_cat = false, $excluded_categories = '', $start = true ) {
-	global $post;
-
-	if ( empty($post) || ! is_single() || is_attachment() )
+	$post = get_post();
+	if ( ! $post || ! is_single() || is_attachment() )
 		return null;
 
 	$cat_array = array();
@@ -1373,7 +1366,7 @@ function next_post_link($format='%link &raquo;', $link='%title', $in_same_cat = 
  */
 function adjacent_post_link($format, $link, $in_same_cat = false, $excluded_categories = '', $previous = true) {
 	if ( $previous && is_attachment() )
-		$post = get_post($GLOBALS['post']->post_parent);
+		$post = get_post( get_post()->post_parent );
 	else
 		$post = get_adjacent_post($in_same_cat, $excluded_categories, $previous);
 
@@ -1680,11 +1673,11 @@ function posts_nav_link( $sep = '', $prelabel = '', $nxtlabel = '' ) {
  * @return string
  */
 function get_comments_pagenum_link( $pagenum = 1, $max_page = 0 ) {
-	global $post, $wp_rewrite;
+	global $wp_rewrite;
 
 	$pagenum = (int) $pagenum;
 
-	$result = get_permalink( $post->ID );
+	$result = get_permalink();
 
 	if ( 'newest' == get_option('default_comments_page') ) {
 		if ( $pagenum != $max_page ) {
@@ -1876,7 +1869,7 @@ function get_shortcut_link() {
  * @return string Home url link with optional path appended.
 */
 function home_url( $path = '', $scheme = null ) {
-	return get_home_url(null, $path, $scheme);
+	return get_home_url( null, $path, $scheme );
 }
 
 /**
@@ -1897,7 +1890,7 @@ function home_url( $path = '', $scheme = null ) {
 function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
 	$orig_scheme = $scheme;
 
-	if ( !in_array( $scheme, array( 'http', 'https', 'relative' ) ) )
+	if ( ! in_array( $scheme, array( 'http', 'https', 'relative' ) ) )
 		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
 
 	if ( empty( $blog_id ) || !is_multisite() ) {
@@ -1908,12 +1901,9 @@ function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
 		restore_current_blog();
 	}
 
-	if ( 'relative' == $scheme )
-		$url = preg_replace( '#^.+://[^/]*#', '', $url );
-	elseif ( 'http' != $scheme )
-		$url = str_replace( 'http://', "$scheme://", $url );
+	$url = set_url_scheme( $url, $scheme );
 
-	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+	if ( ! empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
 		$url .= '/' . ltrim( $path, '/' );
 
 	return apply_filters( 'home_url', $url, $path, $orig_scheme, $blog_id );
@@ -1932,11 +1922,11 @@ function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
  * @uses get_site_url()
  *
  * @param string $path Optional. Path relative to the site url.
- * @param string $scheme Optional. Scheme to give the site url context. Currently 'http', 'https', 'login', 'login_post', 'admin', or 'relative'.
+ * @param string $scheme Optional. Scheme to give the site url context. See set_url_scheme().
  * @return string Site url link with optional path appended.
 */
 function site_url( $path = '', $scheme = null ) {
-	return get_site_url(null, $path, $scheme);
+	return get_site_url( null, $path, $scheme );
 }
 
 /**
@@ -1955,19 +1945,6 @@ function site_url( $path = '', $scheme = null ) {
  * @return string Site url link with optional path appended.
 */
 function get_site_url( $blog_id = null, $path = '', $scheme = null ) {
-	// should the list of allowed schemes be maintained elsewhere?
-	$orig_scheme = $scheme;
-	if ( !in_array( $scheme, array( 'http', 'https', 'relative' ) ) ) {
-		if ( ( 'login_post' == $scheme || 'rpc' == $scheme ) && ( force_ssl_login() || force_ssl_admin() ) )
-			$scheme = 'https';
-		elseif ( ( 'login' == $scheme ) && force_ssl_admin() )
-			$scheme = 'https';
-		elseif ( ( 'admin' == $scheme ) && force_ssl_admin() )
-			$scheme = 'https';
-		else
-			$scheme = ( is_ssl() ? 'https' : 'http' );
-	}
-
 	if ( empty( $blog_id ) || !is_multisite() ) {
 		$url = get_option( 'siteurl' );
 	} else {
@@ -1976,15 +1953,12 @@ function get_site_url( $blog_id = null, $path = '', $scheme = null ) {
 		restore_current_blog();
 	}
 
-	if ( 'relative' == $scheme )
-		$url = preg_replace( '#^.+://[^/]*#', '', $url );
-	elseif ( 'http' != $scheme )
-		$url = str_replace( 'http://', "{$scheme}://", $url );
+	$url = set_url_scheme( $url, $scheme );
 
-	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+	if ( ! empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
 		$url .= '/' . ltrim( $path, '/' );
 
-	return apply_filters( 'site_url', $url, $path, $orig_scheme, $blog_id );
+	return apply_filters( 'site_url', $url, $path, $scheme, $blog_id );
 }
 
 /**
@@ -1998,7 +1972,7 @@ function get_site_url( $blog_id = null, $path = '', $scheme = null ) {
  * @return string Admin url link with optional path appended.
 */
 function admin_url( $path = '', $scheme = 'admin' ) {
-	return get_admin_url(null, $path, $scheme);
+	return get_admin_url( null, $path, $scheme );
 }
 
 /**
@@ -2015,10 +1989,10 @@ function admin_url( $path = '', $scheme = 'admin' ) {
 function get_admin_url( $blog_id = null, $path = '', $scheme = 'admin' ) {
 	$url = get_site_url($blog_id, 'wp-admin/', $scheme);
 
-	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
-		$url .= ltrim($path, '/');
+	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+		$url .= ltrim( $path, '/' );
 
-	return apply_filters('admin_url', $url, $path, $blog_id);
+	return apply_filters( 'admin_url', $url, $path, $blog_id );
 }
 
 /**
@@ -2107,36 +2081,24 @@ function plugins_url($path = '', $plugin = '') {
  * @since 3.0.0
  *
  * @param string $path Optional. Path relative to the site url.
- * @param string $scheme Optional. Scheme to give the site url context. Currently 'http', 'https', 'login', 'login_post', 'admin', or 'relative'.
+ * @param string $scheme Optional. Scheme to give the site url context. See set_url_scheme().
  * @return string Site url link with optional path appended.
 */
 function network_site_url( $path = '', $scheme = null ) {
 	global $current_site;
 
-	if ( !is_multisite() )
+	if ( ! is_multisite() )
 		return site_url($path, $scheme);
-
-	$orig_scheme = $scheme;
-	if ( !in_array( $scheme, array( 'http', 'https', 'relative' ) ) ) {
-		if ( ( 'login_post' == $scheme || 'rpc' == $scheme ) && ( force_ssl_login() || force_ssl_admin() ) )
-			$scheme = 'https';
-		elseif ( ('login' == $scheme) && ( force_ssl_admin() ) )
-			$scheme = 'https';
-		elseif ( ('admin' == $scheme) && force_ssl_admin() )
-			$scheme = 'https';
-		else
-			$scheme = ( is_ssl() ? 'https' : 'http' );
-	}
 
 	if ( 'relative' == $scheme )
 		$url = $current_site->path;
 	else
-		$url = $scheme . '://' . $current_site->domain . $current_site->path;
+		$url = set_url_scheme( 'http://' . $current_site->domain . $current_site->path, $scheme );
 
-	if ( !empty($path) && is_string($path) && strpos($path, '..') === false )
-		$url .= ltrim($path, '/');
+	if ( ! empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+		$url .= ltrim( $path, '/' );
 
-	return apply_filters('network_site_url', $url, $path, $orig_scheme);
+	return apply_filters( 'network_site_url', $url, $path, $scheme );
 }
 
 /**
@@ -2156,20 +2118,20 @@ function network_site_url( $path = '', $scheme = null ) {
 function network_home_url( $path = '', $scheme = null ) {
 	global $current_site;
 
-	if ( !is_multisite() )
+	if ( ! is_multisite() )
 		return home_url($path, $scheme);
 
 	$orig_scheme = $scheme;
 
-	if ( !in_array( $scheme, array( 'http', 'https', 'relative' ) ) )
-		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
+	if ( ! in_array( $scheme, array( 'http', 'https', 'relative' ) ) )
+		$scheme = is_ssl() && ! is_admin() ? 'https' : 'http';
 
 	if ( 'relative' == $scheme )
 		$url = $current_site->path;
 	else
-		$url = $scheme . '://' . $current_site->domain . $current_site->path;
+		$url = set_url_scheme( 'http://' . $current_site->domain . $current_site->path, $scheme );
 
-	if ( !empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
+	if ( ! empty( $path ) && is_string( $path ) && strpos( $path, '..' ) === false )
 		$url .= ltrim( $path, '/' );
 
 	return apply_filters( 'network_home_url', $url, $path, $orig_scheme);
@@ -2443,15 +2405,13 @@ function wp_shortlink_header() {
  * @param string $after Optional HTML to display after the link.
  */
 function the_shortlink( $text = '', $title = '', $before = '', $after = '' ) {
-	global $post;
-
 	if ( empty( $text ) )
 		$text = __('This is the short link.');
 
 	if ( empty( $title ) )
 		$title = the_title_attribute( array( 'echo' => false ) );
 
-	$shortlink = wp_get_shortlink( $post->ID );
+	$shortlink = wp_get_shortlink();
 
 	if ( !empty( $shortlink ) ) {
 		$link = '<a rel="shortlink" href="' . esc_url( $shortlink ) . '" title="' . $title . '">' . $text . '</a>';
