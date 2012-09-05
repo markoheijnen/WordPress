@@ -19,6 +19,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 
 		try {
 			$this->image = new Imagick( $this->file );
+			$this->image->setIteratorIndex(0);
 		}
 		catch ( Exception $e ) {
 			return sprintf(__('File &#8220;%s&#8221; is not an image.'), $this->file);
@@ -155,6 +156,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		}
 
 		$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
+		$this->image->setImagePage( $src_w, $src_h, 0, 0);
 
 		if ( $dst_w || $dst_h ) {
 			// If destination width/height isn't specified, use same as
