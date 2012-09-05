@@ -69,7 +69,7 @@ function wp_crop_image( $src_file, $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_
 	$dst_file = dirname( $dst_file ) . '/' . wp_unique_filename( dirname( $dst_file ), basename( $dst_file ) );
 
 	$result = $editor->save( $dst_file );
-	return $result['file'];
+	return $dst_file;
 }
 
 /**
