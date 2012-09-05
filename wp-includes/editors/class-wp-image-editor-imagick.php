@@ -10,7 +10,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	private function load() {
+	protected function load() {
+		if ( $this->image )
+			return true;
+
 		if ( ! file_exists( $this->file ) )
 			return sprintf( __('File &#8220;%s&#8221; doesn&#8217;t exist?'), $this->file );
 
@@ -26,11 +29,18 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		}
 
 		$this->update_size();
-		$this->orig_type  = $this->image->getImageFormat();
+		$this->orig_type  = $this->image->getImageFormat(); // TODO: Wrap in exception handling
 		if ( ! $this->size )
 			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
 
 		return true;
+	}
+
+	public function get_size() {
+		if ( ! $this->load() )
+			return;
+
+		return parent::get_size();
 	}
 
 	protected function update_size( $width = false, $height = false ) {
@@ -38,26 +48,21 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			return false;
 
 		$size = null;
-		if ( !$this->size || $width || $height ) {
+		if ( !$width || !$height ) {
 			try {
-				$size = $this->image->getImageFormat();
+				$size = $this->image->getImageGeometry();
 			}
 			catch ( Exception $e ) {
 				return sprintf(__('File &#8220;%s&#8221; couldn\'t be checked for size.'), $this->file);
 			}
 		}
 
-		parent::update_size( $width ?: $size['height'], $height ?: $size['width'] );
+		parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
-		// Yes, this is forcing a load every time at the moment.
-		// However, for multi-resize to work, it needs to do so, unless it's going to resize based on a modified image.
 		if ( ! $this->load() )
 			return false;
-
-		if ( ! is_object( $this->image ) )
-			return new WP_Error( 'error_loading_image', $this->image, $this->file );
 
 		$dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
 		if ( ! $dims )
@@ -73,11 +78,148 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		}
 
 		if ( $crop ) {
-			$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
+			return $this->crop( $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_h );
 		}
 
 		//$this->image->thumbnailImage( $dst_w, $dst_h );
-		$this->image->scaleImage( $dst_w, $dst_h, true );
+		$this->image->scaleImage( $dst_w, $dst_h );
+		$this->update_size( $dst_w, $dst_h );
+
+		return $this->image;
+	}
+
+	/**
+	 * Processes current image and saves to disk
+	 * multiple sizes from single source.
+	 *
+	 * @param array $sizes
+	 * @return array
+	 */
+	public function multi_resize( $sizes ) {
+		$metadata = array();
+		if ( ! $this->load() )
+			return $metadata;
+
+		$orig_size = $this->size;
+		$orig_image = $this->image->getImage();
+		foreach ( $sizes as $size => $size_data ) {
+			if ( ! $this->image )
+				$this->image = $orig_image->getImage();
+
+			$image = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+
+			if( ! is_wp_error( $image ) ) {
+				$resized = $this->_save( $image );
+
+				$this->image->destroy();
+				$this->image = null;
+				unset( $resized['path'] );
+
+				if ( ! is_wp_error( $resized ) && $resized )
+					$metadata[$size] = $resized;
+			}
+
+			$this->size = $orig_size;
+		}
+
+		$this->image = $orig_image;
+
+		return $metadata;
+	}
+
+	/**
+	 * Crops image.
+	 *
+	 * @param float $x
+	 * @param float $y
+	 * @param float $w
+	 * @param float $h
+	 * @return boolean
+	 */
+	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
+		if ( ! $this->load() )
+			return;
+
+		// Not sure this is compatible.
+		if ( $src_abs ) {
+			$src_w -= $src_x;
+			$src_h -= $src_y;
+		}
+
+		if( 'JPEG' == $this->orig_type ) {
+			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) );
+			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
+		}
+		else {
+			$this->image->setImageCompressionQuality( $this->quality );
+		}
+
+		$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
+
+		if ( $dst_w || $dst_h ) {
+			// If destination width/height isn't specified, use same as
+			// width/height from source.
+			$dst_w = $dst_w ?: $src_w;
+			$dst_h = $dst_h ?: $src_h;
+
+			$this->image->scaleImage( $dst_w, $dst_h );
+			$this->update_size( $dst_w, $dst_h );
+			return true;
+		}
+
+		$this->update_size( $src_w, $src_h );
+		return true;
+
+		// @TODO: We need exception handling above  // return false;
+	}
+
+	/**
+	 * Rotates in memory image by $angle.
+	 * Ported from image-edit.php
+	 *
+	 * @param float $angle
+	 * @return boolean
+	 */
+	public function rotate( $angle ) {
+		if ( ! $this->load() )
+			return;
+
+		/**
+		 * $angle is 360-$angle because Imagick rotates clockwise
+		 * (GD rotates counter-clockwise)
+		 */
+		try {
+			$this->image->rotateImage( new ImagickPixel('none'), 360-$angle );
+			$this->update_size();
+		}
+		catch ( Exception $e ) {
+			return false; // TODO: WP_Error Here.
+		}
+	}
+
+	/**
+	 * Flips Image
+	 *
+	 * @param boolean $horz
+	 * @param boolean $vert
+	 * @returns boolean
+	 */
+	public function flip( $horz, $vert ) {
+		if ( ! $this->load() )
+			return;
+
+		try {
+			if ( $horz )
+				$this->image->flipImage();
+
+			if ( $vert )
+				$this->image->flopImage();
+		}
+		catch ( Exception $e ) {
+			return false; // TODO: WP_Error Here.
+		}
+
+		return true;
 	}
 
 	/**
@@ -120,6 +262,34 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			'width' => $this->size['width'],
 			'height' => $this->size['height']
 		);
+	}
+
+	/**
+	 * @TODO: Wrap in try and clean up.
+	 * Also, make GIF not stream the last frame :(
+	 *
+	 * @return boolean
+	 */
+	public function stream() {
+		if ( ! $this->load() )
+			return;
+
+		switch ( $this->orig_type ) {
+			case 'JPEG':
+				header( 'Content-Type: image/jpeg' );
+				break;
+			case 'PNG':
+				header( 'Content-Type: image/png' );
+				break;
+			case 'GIF':
+				header( 'Content-Type: image/gif' );
+				break;
+			default:
+				return false;
+		}
+
+		print $this->image->getImageBlob();
+		return true;
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null ) {

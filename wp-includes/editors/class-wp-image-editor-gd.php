@@ -29,7 +29,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 	 *
 	 * @return boolean|\WP_Error
 	 */
-	private function load() {
+	protected function load() {
 		if ( $this->image )
 			return true;
 
