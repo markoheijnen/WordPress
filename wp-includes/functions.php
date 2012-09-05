@@ -3698,7 +3698,7 @@ function _device_can_upload() {
 
 /**
  * Test if a given path is a stream URL
- * 
+ *
  * @param string $path The resource path or URL
  * @return bool True if the path is a stream URL
  */
