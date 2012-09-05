@@ -347,7 +347,7 @@ function _crop_image_resource($img, $x, $y, $w, $h) {
  *
  * @param WP_Image_Editor $image
  * @param type $changes
- * @return GD Image
+ * @return WP_Image_Editor
  */
 function image_edit_apply_changes( $image, $changes ) {
 	if ( is_resource( $image ) )
