@@ -900,6 +900,7 @@ function gd_edit_image_support($mime_type) {
 
 /**
  * Create new GD image resource with transparency support
+ * @TODO: Deprecate if possible.
  *
  * @since 2.9.0
  *
