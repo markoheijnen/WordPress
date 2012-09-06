@@ -1,7 +1,7 @@
 <?php
 
 class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
-	private $image = false; // Imagick Object
+	private $image = null; // Imagick Object
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -52,7 +52,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		return parent::get_size();
 	}
 
-	protected function update_size( $width = false, $height = false ) {
+	protected function update_size( $width = null, $height = null ) {
 		if ( ! $this->load() )
 			return false;
 
@@ -147,7 +147,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 	 */
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
 		if ( ! $this->load() )
-			return;
+			return false;
 
 		// Not sure this is compatible.
 		if ( $src_abs ) {
@@ -192,7 +192,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 	 */
 	public function rotate( $angle ) {
 		if ( ! $this->load() )
-			return;
+			return false;
 
 		/**
 		 * $angle is 360-$angle because Imagick rotates clockwise
@@ -216,7 +216,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 	 */
 	public function flip( $horz, $vert ) {
 		if ( ! $this->load() )
-			return;
+			return false;
 
 		try {
 			if ( $horz )
@@ -249,7 +249,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 
 	protected function _save( $image, $destfilename = null ) {
 		if ( ! $this->load() )
-			return;
+			return false;
 
 		if ( null == $destfilename ) {
 			$destfilename = $this->generate_filename();
@@ -282,7 +282,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 	 */
 	public function stream() {
 		if ( ! $this->load() )
-			return;
+			return false;
 
 		switch ( $this->orig_type ) {
 			case 'JPEG':
