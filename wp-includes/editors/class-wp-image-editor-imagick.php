@@ -87,14 +87,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
 
-		if( 'JPEG' == $this->orig_type ) {
-			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) );
-			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
-		}
-		else {
-			$this->image->setImageCompressionQuality( $this->quality );
-		}
-
 		if ( $crop ) {
 			return $this->crop( $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_h );
 		}
