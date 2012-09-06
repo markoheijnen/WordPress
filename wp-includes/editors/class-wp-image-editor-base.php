@@ -1,9 +1,9 @@
 <?php
 
-class WP_Image_Editor_Base {
-	protected $file = false;
-	protected $size = false;
-	protected $orig_type  = false;
+abstract class WP_Image_Editor_Base {
+	protected $file = null;
+	protected $size = null;
+	protected $orig_type  = null;
 	protected $quality = 90;
 
 	function __construct( $filename ) {
@@ -14,11 +14,18 @@ class WP_Image_Editor_Base {
 		return false;
 	}
 
+	protected function load() {
+		return false;
+	}
+
 	public function get_size() {
+		if ( ! $this->load() )
+			return false;
+
 		return $this->size;
 	}
 
-	protected function update_size( $width = false, $height = false ) {
+	protected function update_size( $width = null, $height = null ) {
 		$this->size = array(
 			'width' => $width,
 			'height' => $height
@@ -30,6 +37,9 @@ class WP_Image_Editor_Base {
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null ) {
+		if ( ! $this->load() )
+			return false;
+
 		// $suffix will be appended to the destination filename, just before the extension
 		$suffix = $this->get_suffix();
 
@@ -46,7 +56,7 @@ class WP_Image_Editor_Base {
 
 	public function get_suffix() {
 		if ( ! $this->get_size() )
-			return;
+			return false;
 
 		return "{$this->size['width']}x{$this->size['height']}";
 	}
