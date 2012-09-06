@@ -3,6 +3,14 @@
 class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 	private $image = false; // Imagick Object
 
+	function __destruct() {
+		if ( $this->image ) {
+			// we don't need the original in memory anymore
+			$this->image->destroy();
+			unset( $this->image );
+		}
+	}
+
 	public static function test() {
 		if ( ! extension_loaded('imagick') )
 			return false;
