@@ -42,14 +42,23 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		if ( ! $this->size )
 			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
 
+		$this->set_quality();
+
 		return true;
 	}
 
-	public function get_size() {
-		if ( ! $this->load() )
-			return;
+	public function set_quality( $quality = null ) {
+		$quality = $quality ?: $this->quality;
 
-		return parent::get_size();
+		if( 'JPEG' == $this->orig_type ) {
+			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $quality, 'image_resize' ) );
+			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
+		}
+		else {
+			$this->image->setImageCompressionQuality( $quality );
+		}
+
+		return parent::set_quality( $quality );
 	}
 
 	protected function update_size( $width = null, $height = null ) {
