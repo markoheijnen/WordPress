@@ -56,13 +56,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return true;
 	}
 
-	public function get_size() {
-		if ( ! $this->load() )
-			return;
-
-		return parent::get_size();
-	}
-
 	protected function update_size( $width = false, $height = false ) {
 		if ( ! $this->load() )
 			return;
@@ -302,20 +295,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			default:
 				return false;
 		}
-	}
-
-	public function generate_filename( $suffix = null, $dest_path = null ) {
-		if ( ! $this->load() )
-			return;
-
-		return parent::generate_filename( $suffix, $dest_path );
-	}
-
-	public function get_suffix() {
-		if ( ! $this->load() )
-			return;
-
-		return parent::get_suffix();
 	}
 
 	private function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
