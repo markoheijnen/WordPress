@@ -80,7 +80,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 			return true;
 		}
 
-		return $resized;
+		return false;
 	}
 
 	protected function _resize( $max_w, $max_h, $crop ) {
