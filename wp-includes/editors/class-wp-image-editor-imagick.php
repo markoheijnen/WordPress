@@ -248,10 +248,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		}
 
 		if( apply_filters( 'wp_editors_stripimage', true ) ) {
-			$this->image->stripImage();
+			$image->stripImage();
 		}
 
-		$this->image->writeImage( $destfilename );
+		$image->writeImage( $destfilename );
 
 		// Set correct file permissions
 		$stat = stat( dirname( $destfilename ) );
