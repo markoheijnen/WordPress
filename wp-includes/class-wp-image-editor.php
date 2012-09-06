@@ -1,8 +1,8 @@
 <?php
 
-class WP_Image_Editor {
+final class WP_Image_Editor {
 
-	final public static function get_instance( $path ) {
+	public static function get_instance( $path ) {
 		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
 
 		if ( $implementation )
