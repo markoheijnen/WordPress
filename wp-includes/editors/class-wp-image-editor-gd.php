@@ -76,7 +76,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		return false;
 	}
 
-	protected function _resize( $max_w, $max_h, $crop ) {
+	protected function _resize( $max_w, $max_h, $crop = false ) {
 		if ( ! $this->load() )
 			return;
 
