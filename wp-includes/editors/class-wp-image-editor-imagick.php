@@ -116,10 +116,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			if ( ! $this->image )
 				$this->image = $orig_image->getImage();
 
-			$image = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
+			$resize_result = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
-			if( ! is_wp_error( $image ) ) {
-				$resized = $this->_save( $image );
+			if( ! is_wp_error( $resize_result ) ) {
+				$resized = $this->save();
 
 				$this->image->destroy();
 				$this->image = null;
