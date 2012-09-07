@@ -297,7 +297,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor_Base {
 		}
 	}
 
-	private function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
+	protected function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
 		$dst_file = $filename;
 
 		if ( $stream = wp_is_stream( $filename ) ) {
