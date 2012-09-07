@@ -156,14 +156,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 			$src_h -= $src_y;
 		}
 
-		if( 'JPEG' == $this->orig_type ) {
-			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) );
-			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
-		}
-		else {
-			$this->image->setImageCompressionQuality( $this->quality );
-		}
-
 		$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
 		$this->image->setImagePage( $src_w, $src_h, 0, 0);
 
