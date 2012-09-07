@@ -294,18 +294,4 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		print $this->image->getImageBlob();
 		return true;
 	}
-
-	public function generate_filename( $suffix = null, $dest_path = null ) {
-		if ( ! $this->load() )
-			return;
-
-		return parent::generate_filename( $suffix, $dest_path );
-	}
-
-	public function get_suffix() {
-		if ( ! $this->load() )
-			return;
-
-		return parent::get_suffix();
-	}
 }
