@@ -95,7 +95,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
 		$this->image->scaleImage( $dst_w, $dst_h );
 		$this->update_size( $dst_w, $dst_h );
 
-		return $this->image;
+		return true;
 	}
 
 	/**
