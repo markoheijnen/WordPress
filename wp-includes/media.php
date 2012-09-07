@@ -688,6 +688,7 @@ function gallery_shortcode($attr) {
 		'captiontag' => 'dd',
 		'columns'    => 3,
 		'size'       => 'thumbnail',
+		'ids'        => '',
 		'include'    => '',
 		'exclude'    => ''
 	), $attr));
@@ -695,6 +696,12 @@ function gallery_shortcode($attr) {
 	$id = intval($id);
 	if ( 'RAND' == $order )
 		$orderby = 'none';
+
+	if ( !empty( $ids ) ) {
+		// 'ids' is explicitly ordered
+		$orderby = 'post__in';
+		$include = $ids;
+	}
 
 	if ( !empty($include) ) {
 		$include = preg_replace( '/[^0-9,]+/', '', $include );
@@ -1457,19 +1464,22 @@ function wp_prepare_attachment_for_js( $attachment ) {
 		'mime'        => $attachment->post_mime_type,
 		'type'        => $type,
 		'subtype'     => $subtype,
+		'icon'        => wp_mime_type_icon( $attachment->post_mime_type ),
 	);
 
-	if ( 'image' === $type ) {
+	if ( $meta && 'image' === $type ) {
 		$sizes = array();
 		$base_url = str_replace( wp_basename( $attachment_url ), '', $attachment_url );
 
-		foreach ( $meta['sizes'] as $slug => $size ) {
-			$sizes[ $slug ] = array(
-				'height'      => $size['height'],
-				'width'       => $size['width'],
-				'url'         => $base_url . $size['file'],
-				'orientation' => $size['height'] > $size['width'] ? 'portrait' : 'landscape',
-			);
+		if ( isset( $meta['sizes'] ) ) {
+			foreach ( $meta['sizes'] as $slug => $size ) {
+				$sizes[ $slug ] = array(
+					'height'      => $size['height'],
+					'width'       => $size['width'],
+					'url'         => $base_url . $size['file'],
+					'orientation' => $size['height'] > $size['width'] ? 'portrait' : 'landscape',
+				);
+			}
 		}
 
 		$response = array_merge( $response, array(
@@ -1525,7 +1535,7 @@ function wp_print_media_templates( $attachment ) {
 	</script>
 
 	<script type="text/html" id="tmpl-attachment">
-		<div class="attachment-thumbnail <%- orientation %>">
+		<div class="attachment-thumbnail type-<%- type %> subtype-<%- subtype %> <%- orientation %>">
 			<% if ( thumbnail ) { %>
 				<img src="<%- thumbnail %>" />
 			<% } %>
@@ -1536,6 +1546,17 @@ function wp_print_media_templates( $attachment ) {
 			<div class="actions"></div>
 		</div>
 		<div class="describe"></div>
+	</script>
+
+	<script type="text/html" id="tmpl-media-selection-preview">
+		<div class="selected-img selected-count-<%- count %>">
+			<% if ( thumbnail ) { %>
+				<img src="<%- thumbnail %>" />
+			<% } %>
+
+			<span class="count"><%- count %></span>
+		</div>
+		<a class="clear-selection" href="#"><?php _e('Clear selection'); ?></a>
 	</script>
 	<?php
 }

@@ -101,6 +101,13 @@
 		},
 
 		render: function() {
+			// Ensure content div exists.
+			this.options.$content = this.options.$content || $('<div />');
+
+			// Detach the content element from the DOM to prevent
+			// `this.$el.html()` from garbage collecting its events.
+			this.options.$content.detach();
+
 			this.$el.html( this.template( this.options ) );
 			this.$('.media-modal-content').append( this.options.$content );
 			return this;
@@ -139,6 +146,102 @@
 	});
 
 	/**
+	 * wp.media.view.Toolbar
+	 */
+	media.view.Toolbar = Backbone.View.extend({
+		tagName:   'div',
+		className: 'media-toolbar',
+
+		initialize: function() {
+			this._views    = {};
+			this.$primary   = $('<div class="media-toolbar-primary" />').prependTo( this.$el );
+			this.$secondary = $('<div class="media-toolbar-secondary" />').prependTo( this.$el );
+
+			if ( this.options.items ) {
+				_.each( this.options.items, function( view, id ) {
+					this.add( id, view, { silent: true } );
+				}, this );
+				this.render();
+			}
+		},
+
+		render: function() {
+			var views = _.chain( this._views ).sortBy( function( view ) {
+				return view.options.priority || 10;
+			}).groupBy( function( view ) {
+				return ( view.options.priority || 10 ) > 0 ? 'primary' : 'secondary';
+			}).value();
+
+			// Make sure to detach the elements we want to reuse.
+			// Otherwise, `jQuery.html()` will unbind their events.
+			$( _.pluck( this._views, 'el' ) ).detach();
+			this.$primary.html( _.pluck( views.primary, 'el' ) );
+			this.$secondary.html( _.pluck( views.secondary, 'el' ) );
+
+			return this;
+		},
+
+		add: function( id, view, options ) {
+			if ( ! ( view instanceof Backbone.View ) ) {
+				view.classes = [ id ].concat( view.classes || [] );
+				view = new media.view.Button( view ).render();
+			}
+
+			this._views[ id ] = view;
+			if ( ! options || ! options.silent )
+				this.render();
+			return this;
+		},
+
+		remove: function( id, options ) {
+			delete this._views[ id ];
+			if ( ! options || ! options.silent )
+				this.render();
+			return this;
+		}
+	});
+
+
+	/**
+	 * wp.media.view.Button
+	 */
+	media.view.Button = Backbone.View.extend({
+		tagName:    'a',
+		className:  'media-button',
+		attributes: { href: '#' },
+
+		events: {
+			'click': 'click'
+		},
+
+		initialize: function() {
+			_.defaults( this.options, {
+				style:   'secondary',
+				text:    '',
+				classes: []
+			});
+		},
+
+		render: function() {
+			var classes = [ this.className ];
+
+			if ( this.options.style )
+				classes.push( 'button-' + this.options.style );
+
+			classes = classes.concat( this.options.classes );
+			this.el.className = classes.join(' ');
+			this.$el.text( this.options.text );
+			return this;
+		},
+
+		click: function( event ) {
+			event.preventDefault();
+			if ( this.options.click )
+				this.options.click.apply( this, arguments );
+		}
+	});
+
+	/**
 	 * wp.media.view.Workspace
 	 */
 	media.view.Workspace = Backbone.View.extend({
@@ -159,6 +262,12 @@
 				uploader:  {}
 			});
 
+			this.$content = $('<div class="existing-attachments" />');
+
+			// If this supports multiple attachments, initialize the sample toolbar view.
+			if ( this.controller.get('multiple') )
+				this.initToolbarView();
+
 			this.attachmentsView = new media.view.Attachments({
 				controller: this.controller,
 				directions: 'Select stuff.',
@@ -167,7 +276,6 @@
 				})
 			});
 
-			this.$content = $('<div class="existing-attachments" />');
 			this.$content.append( this.attachmentsView.$el );
 
 			// Track uploading attachments.
@@ -242,6 +350,42 @@
 					file.attachment.destroy();
 				}
 			}, this.options.uploader ) );
+		},
+
+		// Initializes the toolbar view. Currently uses defaults set for
+		// inserting media into a post. This should be pulled out into the
+		// appropriate workflow when the time comes, but is currently here
+		// to test multiple selections.
+		initToolbarView: function() {
+			this.toolbarView = new media.view.Toolbar({
+				items: {
+					'selection-preview': new media.view.SelectionPreview({
+						controller: this.controller,
+						collection: this.controller.selection,
+						priority: -40
+					}),
+					'insert-into-post': {
+						style: 'primary',
+						text:  'Insert into post',
+						priority: 40
+					},
+					'create-new-gallery': {
+						style: 'primary',
+						text:  'Create a new gallery',
+						priority: 30
+					},
+					'add-to-gallery': {
+						text:  'Add to gallery',
+						priority: 20
+					}
+				}
+			});
+
+			this.controller.selection.on( 'add remove', function() {
+				this.$el.toggleClass( 'with-toolbar', !! this.controller.selection.length );
+			}, this );
+
+			this.$content.append( this.toolbarView.$el );
 		}
 	});
 
@@ -383,12 +527,14 @@
 		render: function() {
 			var attachment = this.model.toJSON(),
 				options = {
+					thumbnail:   'image' === attachment.type ? attachment.url : attachment.icon,
+					uploading:   attachment.uploading,
 					orientation: attachment.orientation || 'landscape',
-					thumbnail:   attachment.url || '',
-					uploading:   attachment.uploading
+					type:        attachment.type,
+					subtype:     attachment.subtype
 				};
 
-			// Use the medium size if possible. If the medium size
+			// Use the medium image size if possible. If the medium size
 			// doesn't exist, then the attachment is too small.
 			// In that case, use the attachment itself.
 			if ( attachment.sizes && attachment.sizes.medium ) {
@@ -402,6 +548,10 @@
 				this.$bar = this.$('.media-progress-bar div');
 			else
 				delete this.$bar;
+
+			// Check if the model is selected.
+			if ( this.controller.selection.has( this.model ) )
+				this.select();
 
 			return this;
 		},
@@ -417,13 +567,68 @@
 		},
 
 		select: function( model, collection ) {
-			if ( collection === this.controller.selection )
-				this.$el.addClass('selected');
+			// If a collection is provided, check if it's the selection.
+			// If it's not, bail; we're in another selection's event loop.
+			if ( collection && collection !== this.controller.selection )
+				return;
+
+			this.$el.addClass('selected');
 		},
 
 		deselect: function( model, collection ) {
-			if ( collection === this.controller.selection )
-				this.$el.removeClass('selected');
+			// If a collection is provided, check if it's the selection.
+			// If it's not, bail; we're in another selection's event loop.
+			if ( collection && collection !== this.controller.selection )
+				return;
+
+			this.$el.removeClass('selected');
+		}
+	});
+
+	/**
+	 * wp.media.view.SelectionPreview
+	 */
+	media.view.SelectionPreview = Backbone.View.extend({
+		tagName:   'div',
+		className: 'selection-preview',
+		template:  media.template('media-selection-preview'),
+
+		events: {
+			'click .clear-selection': 'clear'
+		},
+
+		initialize: function() {
+			this.controller = this.options.controller;
+			this.collection.on( 'add change:url remove', this.render, this );
+			this.render();
+		},
+
+		render: function() {
+			var options = {},
+				first, sizes, amount;
+
+			// If nothing is selected, display nothing.
+			if ( ! this.collection.length ) {
+				this.$el.empty();
+				return this;
+			}
+
+			options.count = this.collection.length;
+			first = this.collection.first();
+			sizes = first.get('sizes');
+
+			if ( 'image' === first.get('type') )
+				options.thumbnail = ( sizes && sizes.thumbnail ) ? sizes.thumbnail.url : first.get('url');
+			else
+				options.thumbnail =  first.get('icon');
+
+			this.$el.html( this.template( options ) );
+			return this;
+		},
+
+		clear: function( event ) {
+			event.preventDefault();
+			this.collection.clear();
 		}
 	});
 }(jQuery));
