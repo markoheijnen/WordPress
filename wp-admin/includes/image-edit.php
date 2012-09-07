@@ -218,19 +218,19 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 		$image = apply_filters('image_save_pre', $image, $post_id);
 
 		switch ( $mime_type ) {
-		    case 'image/jpeg':
-			    header( 'Content-Type: image/jpeg' );
-			    return imagejpeg( $image, null, 90 );
-		    case 'image/png':
-			    header( 'Content-Type: image/png' );
-			    return imagepng( $image );
-		    case 'image/gif':
-			    header( 'Content-Type: image/gif' );
-			    return imagegif( $image );
-		    default:
+			case 'image/jpeg':
+				header( 'Content-Type: image/jpeg' );
+				return imagejpeg( $image, null, 90 );
+			case 'image/png':
+				header( 'Content-Type: image/png' );
+				return imagepng( $image );
+			case 'image/gif':
+				header( 'Content-Type: image/gif' );
+				return imagegif( $image );
+			default:
 				return false;
 		}
-    }
+	}
 }
 
 /**
