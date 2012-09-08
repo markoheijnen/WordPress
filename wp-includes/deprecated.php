@@ -3210,13 +3210,13 @@ function _get_post_ancestors( &$post ) {
  *
  * @since 2.1.0
  * @deprecated 3.5.0
- * @deprecated wp_get_image_for_editing()
+ * @see WP_Image_Editor
  *
  * @param string $file Filename of the image to load.
  * @return resource The resulting image resource on success, Error string on failure.
  */
 function wp_load_image( $file ) {
-	_deprecated_function( __FUNCTION__, '3.5', 'wp_get_image_for_editing()' );
+	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor' );
 
 	if ( is_numeric( $file ) )
 		$file = get_attached_file( $file );
@@ -3250,7 +3250,7 @@ function wp_load_image( $file ) {
  *
  * @since 2.5.0
  * @deprecated 3.5.0
- * @deprecated wp_get_image_for_editing()
+ * @see WP_Image_Editor
  *
  * @param string $file Image file path.
  * @param int $max_w Maximum width to resize to.
