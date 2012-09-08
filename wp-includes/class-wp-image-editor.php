@@ -33,9 +33,6 @@ final class WP_Image_Editor {
 				if ( ! call_user_func( array( $class, 'test' ) ) )
 					continue;
 
-				if( ! apply_filters( 'wp_editor_use_' . $editor, true ) )
-					continue;
-
 				$implementation = $class;
 
 				break;
