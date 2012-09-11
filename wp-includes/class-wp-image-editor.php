@@ -6,7 +6,7 @@ abstract class WP_Image_Editor {
 	protected $orig_type  = null;
 	protected $quality = 90;
 
-	function __construct( $filename ) {
+	protected function __construct( $filename ) {
 		$this->file = $filename;
 	}
 
