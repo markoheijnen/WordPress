@@ -118,7 +118,6 @@ function wp_generate_attachment_metadata( $attachment_id, $file ) {
 
 		$editor = WP_Image_Editor::get_instance( $file );
 		$metadata['sizes'] = $editor->multi_resize( $sizes );
-		unset( $editor );
 
 		// fetch additional metadata from exif/iptc
 		$image_meta = wp_read_image_metadata( $file );

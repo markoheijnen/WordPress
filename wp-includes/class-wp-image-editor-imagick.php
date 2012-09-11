@@ -7,7 +7,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		if ( $this->image ) {
 			// we don't need the original in memory anymore
 			$this->image->destroy();
-			unset( $this->image );
 		}
 	}
 
