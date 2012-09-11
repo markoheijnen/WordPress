@@ -13,6 +13,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	/**
 	 * Checks to see if GD is available.
 	 *
+	 * @since 3.5
+	 *
 	 * @return boolean
 	 */
 	public static function test() {
@@ -63,6 +65,15 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		parent::update_size( $width ?: imagesx( $this->image ), $height ?: imagesy( $this->image ) );
 	}
 
+	/**
+	 * Resizes Image.
+	 * Wrapper around _resize, since _resize returns a GD Resource
+	 *
+	 * @param int $max_w
+	 * @param int $max_h
+	 * @param boolean $crop
+	 * @return boolean
+	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
 		$resized = $this->_resize( $max_w, $max_h, $crop );
 
