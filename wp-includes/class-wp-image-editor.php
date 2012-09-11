@@ -88,6 +88,12 @@ abstract class WP_Image_Editor {
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
 		$ext  = $info['extension'];
+
+		// Convert any unrecognized formats to jpeg
+		if ( !in_array( strtolower( $ext ), array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {
+			$ext = 'jpg';
+		}
+
 		$name = wp_basename( $this->file, ".$ext" );
 
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )

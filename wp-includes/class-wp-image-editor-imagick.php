@@ -277,9 +277,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			return false;
 
 		switch ( $this->orig_type ) {
-			case 'JPEG':
-				header( 'Content-Type: image/jpeg' );
-				break;
 			case 'PNG':
 				header( 'Content-Type: image/png' );
 				break;
@@ -287,7 +284,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				header( 'Content-Type: image/gif' );
 				break;
 			default:
-				return false;
+				header( 'Content-Type: image/jpeg' );
+				break;
 		}
 
 		print $this->image->getImageBlob();

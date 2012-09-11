@@ -294,9 +294,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return;
 
 		switch ( $this->orig_type ) {
-			case 'image/jpeg':
-				header( 'Content-Type: image/jpeg' );
-				return imagejpeg( $this->image, null, $this->quality );
 			case 'image/png':
 				header( 'Content-Type: image/png' );
 				return imagepng( $this->image );
@@ -304,7 +301,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 				header( 'Content-Type: image/gif' );
 				return imagegif( $this->image );
 			default:
-				return false;
+				header( 'Content-Type: image/jpeg' );
+				return imagejpeg( $this->image, null, $this->quality );
 		}
 	}
 
