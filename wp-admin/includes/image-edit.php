@@ -207,9 +207,8 @@ function wp_image_editor($post_id, $msg = false) {
  * @return boolean
  */
 function wp_stream_image( $image, $mime_type, $post_id ) {
-	$image = apply_filters('image_editor_save_pre', $image, $post_id);
-
 	if ( ! is_resource( $image ) ) {
+		$image = apply_filters('image_editor_save_pre', $image, $post_id);
 		$image->stream();
 
     } else {
