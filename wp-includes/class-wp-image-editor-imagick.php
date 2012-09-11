@@ -1,6 +1,6 @@
 <?php
 
-class WP_Image_Editor_Imagick extends WP_Image_Editor_Base {
+class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	private $image = null; // Imagick Object
 
 	function __destruct() {

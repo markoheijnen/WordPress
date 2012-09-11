@@ -1,6 +1,6 @@
 <?php
 
-class WP_Image_Editor_GD extends WP_Image_Editor_Base {
+class WP_Image_Editor_GD extends WP_Image_Editor {
 	private $image = false; // GD Resource
 
 	function __destruct() {
