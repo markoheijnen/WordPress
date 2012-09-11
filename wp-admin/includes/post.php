@@ -459,19 +459,6 @@ function get_default_post_to_edit( $post_type = 'post', $create_in_db = false ) 
 }
 
 /**
- * Get the default page information to use.
- *
- * @since 2.5.0
- *
- * @return WP_Post Post object containing all the default post data as attributes
- */
-function get_default_page_to_edit() {
-	$page = get_default_post_to_edit();
-	$page->post_type = 'page';
-	return $page;
-}
-
-/**
  * Determine if a post exists based on title, content, and date
  *
  * @since 2.0.0
@@ -1084,9 +1071,9 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 	if ( false === strpos($permalink, '%postname%') && false === strpos($permalink, '%pagename%') ) {
 		$return = '<strong>' . __('Permalink:') . "</strong>\n" . '<span id="sample-permalink" tabindex="-1">' . $permalink . "</span>\n";
 		if ( '' == get_option( 'permalink_structure' ) && current_user_can( 'manage_options' ) && !( 'page' == get_option('show_on_front') && $id == get_option('page_on_front') ) )
-			$return .= '<span id="change-permalinks"><a href="options-permalink.php" class="button" target="_blank">' . __('Change Permalinks') . "</a></span>\n";
+			$return .= '<span id="change-permalinks"><a href="options-permalink.php" class="button button-tiny" target="_blank">' . __('Change Permalinks') . "</a></span>\n";
 		if ( isset($view_post) )
-			$return .= "<span id='view-post-btn'><a href='$permalink' class='button'>$view_post</a></span>\n";
+			$return .= "<span id='view-post-btn'><a href='$permalink' class='button button-tiny'>$view_post</a></span>\n";
 
 		$return = apply_filters('get_sample_permalink_html', $return, $id, $new_title, $new_slug);
 
@@ -1113,10 +1100,10 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 	$return =  '<strong>' . __('Permalink:') . "</strong>\n";
 	$return .= '<span id="sample-permalink" tabindex="-1">' . $display_link . "</span>\n";
 	$return .= '&lrm;'; // Fix bi-directional text display defect in RTL languages.
-	$return .= '<span id="edit-slug-buttons"><a href="#post_name" class="edit-slug button hide-if-no-js" onclick="editPermalink(' . $id . '); return false;">' . __('Edit') . "</a></span>\n";
+	$return .= '<span id="edit-slug-buttons"><a href="#post_name" class="edit-slug button button-tiny hide-if-no-js" onclick="editPermalink(' . $id . '); return false;">' . __('Edit') . "</a></span>\n";
 	$return .= '<span id="editable-post-name-full">' . $post_name . "</span>\n";
 	if ( isset($view_post) )
-		$return .= "<span id='view-post-btn'><a href='$view_link' class='button'>$view_post</a></span>\n";
+		$return .= "<span id='view-post-btn'><a href='$view_link' class='button button-tiny'>$view_post</a></span>\n";
 
 	$return = apply_filters('get_sample_permalink_html', $return, $id, $new_title, $new_slug);
 

@@ -1537,7 +1537,7 @@ function wp_print_media_templates( $attachment ) {
 	<script type="text/html" id="tmpl-attachment">
 		<div class="attachment-thumbnail type-<%- type %> subtype-<%- subtype %> <%- orientation %>">
 			<% if ( thumbnail ) { %>
-				<img src="<%- thumbnail %>" />
+				<img src="<%- thumbnail %>" draggable="false" />
 			<% } %>
 
 			<% if ( uploading ) { %>
@@ -1551,7 +1551,7 @@ function wp_print_media_templates( $attachment ) {
 	<script type="text/html" id="tmpl-media-selection-preview">
 		<div class="selected-img selected-count-<%- count %>">
 			<% if ( thumbnail ) { %>
-				<img src="<%- thumbnail %>" />
+				<img src="<%- thumbnail %>" draggable="false" />
 			<% } %>
 
 			<span class="count"><%- count %></span>
