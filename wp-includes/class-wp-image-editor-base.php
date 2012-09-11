@@ -10,13 +10,15 @@ abstract class WP_Image_Editor_Base {
 		$this->file = $filename;
 	}
 
-	public static function test() {
-		return false;
-	}
-
-	protected function load() {
-		return false;
-	}
+	abstract public static function test();
+	abstract protected function load();
+	abstract public function resize( $max_w, $max_h, $crop = false );
+	abstract public function multi_resize( $sizes );
+	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
+	abstract public function rotate( $angle );
+	abstract public function flip( $horz, $vert );
+	abstract public function save( $destfilename = null );
+	abstract public function stream();
 
 	public function get_size() {
 		if ( ! $this->load() )
