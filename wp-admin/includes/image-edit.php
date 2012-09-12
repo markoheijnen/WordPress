@@ -280,7 +280,7 @@ function _image_get_preview_ratio($w, $h) {
 
 // @TODO: Returns GD resource, but is NOT public
 function _rotate_image_resource($img, $angle) {
-	_deprecated_function( __FUNCTION__, '3.5', __( 'Use WP_Image_Editor_GD::rotate' ) );
+	_deprecated_function( __FUNCTION__, '3.5', __( 'Use WP_Image_Editor::rotate' ) );
 	if ( function_exists('imagerotate') ) {
 		$rotated = imagerotate($img, $angle, 0);
 		if ( is_resource($rotated) ) {
@@ -302,7 +302,7 @@ function _rotate_image_resource($img, $angle) {
  * @return GD_Resource
  */
 function _flip_image_resource($img, $horz, $vert) {
-	_deprecated_function( __FUNCTION__, '3.5', __( 'Use WP_Image_Editor_GD::flip' ) );
+	_deprecated_function( __FUNCTION__, '3.5', __( 'Use WP_Image_Editor::flip' ) );
 	$w = imagesx($img);
 	$h = imagesy($img);
 	$dst = wp_imagecreatetruecolor($w, $h);
