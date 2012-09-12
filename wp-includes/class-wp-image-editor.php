@@ -13,7 +13,7 @@ abstract class WP_Image_Editor {
 	}
 
 	/**
-	 * Returns a WP_Image_Editor instance and loads $path into it. 
+	 * Returns a WP_Image_Editor instance and loads $path into it.
 	 *
 	 * @since 3.5.0
 	 *
