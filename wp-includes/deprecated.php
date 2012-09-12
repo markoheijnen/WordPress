@@ -3265,6 +3265,8 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor' );
 
 	$editor = WP_Image_Editor::get_instance( $file );
+	if ( is_wp_error( $editor ) )
+		return $editor;
 	$editor->set_quality( $jpeg_quality );
 
 	$resized = $editor->resize( $max_w, $max_h, $crop );
