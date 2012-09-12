@@ -3267,9 +3267,11 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	$editor = WP_Image_Editor::get_instance( $file );
 	$editor->set_quality( $jpeg_quality );
 
-	$editor->resize( $max_w, $max_h, $crop );
-	$editor->save( $editor->generate_filename( $suffix, $dest_path ) );
-	unset( $editor );
+	$resized = $editor->resize( $max_w, $max_h, $crop );
+	if ( is_wp_error( $resized ) )
+		return $resized;
+
+	return $editor->save( $editor->generate_filename( $suffix, $dest_path ) );
 }
 
 /**

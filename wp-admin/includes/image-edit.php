@@ -209,7 +209,11 @@ function wp_image_editor($post_id, $msg = false) {
 function wp_stream_image( $image, $mime_type, $post_id ) {
 	if ( $image instanceof WP_Image_Editor ) {
 		$image = apply_filters('image_editor_save_pre', $image, $post_id);
-		$image->stream();
+
+		if ( is_wp_error( $image->stream() ) )
+			return false;
+
+		return true;
 
     } else {
 		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
@@ -457,7 +461,7 @@ function stream_preview_image($post_id) {
 
 	$img = WP_Image_Editor::get_instance( _load_image_to_edit_path( $post_id ) );
 
-    if ( ! $img )
+    if ( is_wp_error( $img) )
         return false;
 
 	$changes = !empty($_REQUEST['history']) ? json_decode( stripslashes($_REQUEST['history']) ) : null;
@@ -473,9 +477,10 @@ function stream_preview_image($post_id) {
 	$w2 = $w * $ratio;
 	$h2 = $h * $ratio;
 
-	$img->resize( $w2, $h2 );
-	wp_stream_image( $img, $post->post_mime_type, $post_id );
-	return true;
+	if ( is_wp_error( $img->resize( $w2, $h2 ) ) )
+		return false;
+
+	return wp_stream_image( $img, $post->post_mime_type, $post_id );
 }
 
 function wp_restore_image($post_id) {

@@ -12,6 +12,14 @@ abstract class WP_Image_Editor {
 		return $this->load();
 	}
 
+	/**
+	 * Returns a WP_Image_Editor instance and loads $path into it. 
+	 *
+	 * @since 3.5.0
+	 *
+	 * @param string $path
+	 * @return WP_Image_Editor|boolean
+	 */
 	public final static function get_instance( $path ) {
 		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
 
@@ -44,11 +52,9 @@ abstract class WP_Image_Editor {
 					continue;
 
 				$implementation = $class;
-
 				break;
 			}
 		}
-
 		return $implementation;
 	}
 
@@ -62,19 +68,44 @@ abstract class WP_Image_Editor {
 	abstract public function save( $destfilename = null );
 	abstract public function stream();
 
+	/**
+	 * Gets dimensions of image
+	 *
+	 * @since 3.5.0
+	 *
+	 * @return array { 'width'=>int, 'height'=>int }
+	 */
 	public function get_size() {
 		return $this->size;
 	}
 
+	/**
+	 * Sets current image size
+	 *
+	 * @since 3.5.0
+	 *
+	 * @param int $width
+	 * @param int $height
+	 */
 	protected function update_size( $width = null, $height = null ) {
 		$this->size = array(
 			'width' => $width,
 			'height' => $height
 		);
+		return true;
 	}
 
+	/**
+	 * Sets quality of image, in percent (1-100%).
+	 *
+	 * @since 3.5.0
+	 *
+	 * @param int $quality 1-100
+	 */
 	public function set_quality( $quality ) {
 		$this->quality = apply_filters( 'wp_editor_set_quality', $quality );
+		
+		return ( (bool) $this->quality );
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null ) {

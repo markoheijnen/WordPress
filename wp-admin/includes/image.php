@@ -56,8 +56,8 @@ function wp_crop_image( $src_file, $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_
 	$editor = WP_Image_Editor::get_instance( $src_file );
 	$src = $editor->crop( $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_h, $src_abs );
 
-	if ( ! $src )
-		return new WP_Error( 'error_loading_image', '', $src_file );
+	if ( is_wp_error( $src ) )
+		return $src;
 
 	if ( ! $dst_file )
 		$dst_file = str_replace( basename( $src_file ), 'cropped-' . basename( $src_file ), $src_file );

@@ -1,7 +1,7 @@
 <?php
 
 class WP_Image_Editor_Imagick extends WP_Image_Editor {
-	private $image = null; // Imagick Object
+	protected $image = null; // Imagick Object
 
 	function __destruct() {
 		if ( $this->image ) {
@@ -22,25 +22,24 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			return true;
 
 		if ( ! file_exists( $this->file ) )
-			return sprintf( __('File &#8220;%s&#8221; doesn&#8217;t exist?'), $this->file );
+			return new WP_Error( 'error_loading_image', __('File doesn&#8217;t exist.'), $this->file );
 
 		try {
 			$this->image = new Imagick( $this->file );
+
+			if( ! $this->image->valid() )
+				return new WP_Error( 'invalid_image', __('File is not an image.'), $this->file);
+
+			// Select the first frame to handle animated GIFs properly
 			$this->image->setIteratorIndex(0);
+			$this->orig_type = $this->image->getImageFormat();
+	
 		}
 		catch ( Exception $e ) {
-			return sprintf(__('File &#8220;%s&#8221; is not an image.'), $this->file);
-		}
-
-		if( ! $this->image->valid() ) {
-			return sprintf(__('File &#8220;%s&#8221; is not an image.'), $this->file);
+			return new WP_Error( 'error_loading_image',  $e->getMessage(), $this->file );
 		}
 
 		$this->update_size();
-		$this->orig_type  = $this->image->getImageFormat(); // TODO: Wrap in exception handling
-		if ( ! $this->size )
-			return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
-
 		$this->set_quality();
 
 		return true;
@@ -49,12 +48,17 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	public function set_quality( $quality = null ) {
 		$quality = $quality ?: $this->quality;
 
-		if( 'JPEG' == $this->orig_type ) {
-			$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $quality, 'image_resize' ) );
-			$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
+		try {
+			if( 'JPEG' == $this->orig_type ) {
+				$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $quality, 'image_resize' ) );
+				$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
+			}
+			else {
+				$this->image->setImageCompressionQuality( $quality );
+			}
 		}
-		else {
-			$this->image->setImageCompressionQuality( $quality );
+		catch ( Exception $e ) {
+			return new WP_Error( 'image_quality_error', $e->getMessage() );			
 		}
 
 		return parent::set_quality( $quality );
@@ -67,11 +71,11 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				$size = $this->image->getImageGeometry();
 			}
 			catch ( Exception $e ) {
-				return sprintf(__('File &#8220;%s&#8221; couldn\'t be checked for size.'), $this->file);
+				return new WP_Error( 'invalid_image', __('Could not read image size'), $this->file );
 			}
 		}
 
-		parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
+		return parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
@@ -84,11 +88,18 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			return $this->crop( $src_x, $src_y, $src_w, $src_h, $dst_w, $dst_h );
 		}
 
-		//$this->image->thumbnailImage( $dst_w, $dst_h );
-		$this->image->scaleImage( $dst_w, $dst_h );
-		$this->update_size( $dst_w, $dst_h );
+		try {
+			/**
+			 * @TODO: Thumbnail is more efficient, given a newer version of Imagemagick.
+			 * $this->image->thumbnailImage( $dst_w, $dst_h );
+			 */
+			$this->image->scaleImage( $dst_w, $dst_h );
+		}
+		catch ( Exception $e ) {
+			return new WP_Error( 'image_resize_error', $e->getMessage() );
+		}
 
-		return true;
+		return $this->update_size( $dst_w, $dst_h );
 	}
 
 	/**
@@ -102,6 +113,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		$metadata = array();
 		$orig_size = $this->size;
 		$orig_image = $this->image->getImage();
+
 		foreach ( $sizes as $size => $size_data ) {
 			if ( ! $this->image )
 				$this->image = $orig_image->getImage();
@@ -143,29 +155,30 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$src_h -= $src_y;
 		}
 
-		$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
-		$this->image->setImagePage( $src_w, $src_h, 0, 0);
+		try {
+			$this->image->cropImage( $src_w, $src_h, $src_x, $src_y );
+			$this->image->setImagePage( $src_w, $src_h, 0, 0);
 
-		if ( $dst_w || $dst_h ) {
-			// If destination width/height isn't specified, use same as
-			// width/height from source.
-			$dst_w = $dst_w ?: $src_w;
-			$dst_h = $dst_h ?: $src_h;
+			if ( $dst_w || $dst_h ) {
+				// If destination width/height isn't specified, use same as
+				// width/height from source.
+				$dst_w = $dst_w ?: $src_w;
+				$dst_h = $dst_h ?: $src_h;
 
-			$this->image->scaleImage( $dst_w, $dst_h );
-			$this->update_size( $dst_w, $dst_h );
-			return true;
+				$this->image->scaleImage( $dst_w, $dst_h );
+				return $this->update_size( $dst_w, $dst_h );;
+			}
 		}
-
-		$this->update_size( $src_w, $src_h );
-		return true;
-
-		// @TODO: We need exception handling above  // return false;
+		catch ( Exception $e ) {
+			return new WP_Error( 'image_crop_error', $e->getMessage() );
+		}
+		return $this->update_size( $src_w, $src_h );
 	}
 
 	/**
-	 * Rotates in memory image by $angle.
-	 * Ported from image-edit.php
+	 * Rotates image by $angle.
+	 *
+	 * @since 3.5.0
 	 *
 	 * @param float $angle
 	 * @return boolean
@@ -177,11 +190,11 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		 */
 		try {
 			$this->image->rotateImage( new ImagickPixel('none'), 360-$angle );
-			$this->update_size();
 		}
 		catch ( Exception $e ) {
-			return false; // TODO: WP_Error Here.
+			return new WP_Error( 'image_rotate_error', $e->getMessage() );
 		}
+		return $this->update_size();	
 	}
 
 	/**
@@ -200,9 +213,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				$this->image->flopImage();
 		}
 		catch ( Exception $e ) {
-			return false; // TODO: WP_Error Here.
+			return new WP_Error( 'image_flip_error', $e->getMessage() );
 		}
-
 		return true;
 	}
 
@@ -226,11 +238,16 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$destfilename = $this->generate_filename();
 		}
 
-		if( apply_filters( 'wp_editors_stripimage', true ) ) {
-			$image->stripImage();
-		}
+		try {
+			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
+				$image->stripImage();
+			}
 
-		$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
+			$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
+		}
+		catch ( Exception $e ) {
+			return new WP_Error( 'image_save_error', $e->getMessage() );
+		}
 
 		// Set correct file permissions
 		$stat = stat( dirname( $destfilename ) );
@@ -246,8 +263,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * @TODO: Wrap in try and clean up.
-	 * Also, make GIF not stream the last frame :(
+	 * Streams current image to browser
 	 *
 	 * @return boolean
 	 */
@@ -264,7 +280,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				break;
 		}
 
-		print $this->image->getImageBlob();
+		try {		
+			print $this->image->getImageBlob();
+		}
+		catch ( Exception $e ) {
+			return new WP_Error( 'image_stream_error', $e->getMessage() );
+		}
+
 		return true;
 	}
 }

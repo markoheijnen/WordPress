@@ -382,10 +382,11 @@ function image_resize_dimensions($orig_w, $orig_h, $dest_w, $dest_h, $crop = fal
 function image_make_intermediate_size( $file, $width, $height, $crop = false ) {
 	if ( $width || $height ) {
 		$editor = WP_Image_Editor::get_instance( $file );
-		$editor->resize( $width, $height, $crop );
-		$resized_file = $editor->save();
 
-		unset( $editor );
+		if ( is_wp_error( $editor->resize( $width, $height, $crop ) ) );
+			return false;
+
+		$resized_file = $editor->save();
 
 		if ( ! is_wp_error( $resized_file ) && $resized_file ) {
 			unset( $resized_file['path'] );
