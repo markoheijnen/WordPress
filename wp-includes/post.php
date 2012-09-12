@@ -223,11 +223,10 @@ function update_attached_file( $attachment_id, $file ) {
 function _wp_relative_upload_path( $path ) {
 	$new_path = $path;
 
-	if ( ($uploads = wp_upload_dir()) && false === $uploads['error'] ) {
-		if ( 0 === strpos($new_path, $uploads['basedir']) ) {
-				$new_path = str_replace($uploads['basedir'], '', $new_path);
-				$new_path = ltrim($new_path, '/');
-		}
+	$uploads = wp_upload_dir();
+	if ( 0 === strpos( $new_path, $uploads['basedir'] ) ) {
+			$new_path = str_replace( $uploads['basedir'], '', $new_path );
+			$new_path = ltrim( $new_path, '/' );
 	}
 
 	return apply_filters( '_wp_relative_upload_path', $new_path, $path );
@@ -4670,9 +4669,8 @@ function _future_post_hook( $deprecated = '', $post ) {
  * @since 2.3.0
  * @access private
  * @uses $wpdb
- * @uses XMLRPC_REQUEST and APP_REQUEST constants.
+ * @uses XMLRPC_REQUEST constant.
  * @uses do_action() Calls 'xmlprc_publish_post' on post ID if XMLRPC_REQUEST is defined.
- * @uses do_action() Calls 'app_publish_post' on post ID if APP_REQUEST is defined.
  *
  * @param int $post_id The ID in the database table of the post being published
  */
@@ -4681,8 +4679,6 @@ function _publish_post_hook($post_id) {
 
 	if ( defined('XMLRPC_REQUEST') )
 		do_action('xmlrpc_publish_post', $post_id);
-	if ( defined('APP_REQUEST') )
-		do_action('app_publish_post', $post_id);
 
 	if ( defined('WP_IMPORTING') )
 		return;

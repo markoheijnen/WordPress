@@ -1444,21 +1444,16 @@ function get_temp_dir() {
  * @return array See above for description.
  */
 function wp_upload_dir( $time = null ) {
-	global $_wp_switched;
 	$siteurl = get_option( 'siteurl' );
-	$upload_path = get_option( 'upload_path' );
-	$upload_path = trim($upload_path);
-	$main_override = is_multisite() && defined( 'MULTISITE' ) && is_main_site();
-	if ( empty($upload_path) ) {
+	$upload_path = trim( get_option( 'upload_path' ) );
+
+	if ( empty( $upload_path ) || 'wp-content/uploads' == $upload_path ) {
 		$dir = WP_CONTENT_DIR . '/uploads';
+	} elseif ( 0 !== strpos( $upload_path, ABSPATH ) ) {
+		// $dir is absolute, $upload_path is (maybe) relative to ABSPATH
+		$dir = path_join( ABSPATH, $upload_path );
 	} else {
 		$dir = $upload_path;
-		if ( 'wp-content/uploads' == $upload_path ) {
-			$dir = WP_CONTENT_DIR . '/uploads';
-		} elseif ( 0 !== strpos($dir, ABSPATH) ) {
-			// $dir is absolute, $upload_path is (maybe) relative to ABSPATH
-			$dir = path_join( ABSPATH, $dir );
-		}
 	}
 
 	if ( !$url = get_option( 'upload_url_path' ) ) {
@@ -1468,19 +1463,28 @@ function wp_upload_dir( $time = null ) {
 			$url = trailingslashit( $siteurl ) . $upload_path;
 	}
 
-	if ( defined('UPLOADS') && ! $main_override && ! $_wp_switched ) {
+	if ( defined( 'UPLOADS' ) ) {
 		$dir = ABSPATH . UPLOADS;
 		$url = trailingslashit( $siteurl ) . UPLOADS;
 	}
 
-	if ( is_multisite() && ! $main_override && ! $_wp_switched  ) {
-		if ( defined( 'BLOGUPLOADDIR' ) )
-			$dir = untrailingslashit(BLOGUPLOADDIR);
-		$url = str_replace( UPLOADS, 'files', $url );
+	// Multisite (if not the main site in a post-MU network)
+	if ( is_multisite() && ! ( is_main_site() && defined( 'MULTISITE' ) ) ) {
+		if ( ! get_site_option( 'ms_files_rewriting' ) ) {
+			// Append sites/%d if we're not on the main site (for post-MU networks).
+			$ms_dir = '/sites/' . get_current_blog_id();
+			$dir .= $ms_dir;
+			$url .= $ms_dir;
+		} elseif ( ! ms_is_switched() ) {
+			// Handle the old-form ms-files.php rewriting if the network still has that enabled.
+			if ( defined( 'BLOGUPLOADDIR' ) )
+				$dir = untrailingslashit( BLOGUPLOADDIR );
+			$url = str_replace( UPLOADS, 'files', $url );
+		}
 	}
 
-	$bdir = $dir;
-	$burl = $url;
+	$basedir = $dir;
+	$baseurl = $url;
 
 	$subdir = '';
 	if ( get_option( 'uploads_use_yearmonth_folders' ) ) {
@@ -1495,12 +1499,20 @@ function wp_upload_dir( $time = null ) {
 	$dir .= $subdir;
 	$url .= $subdir;
 
-	$uploads = apply_filters( 'upload_dir', array( 'path' => $dir, 'url' => $url, 'subdir' => $subdir, 'basedir' => $bdir, 'baseurl' => $burl, 'error' => false ) );
+	$uploads = apply_filters( 'upload_dir',
+		array(
+			'path'    => $dir,
+			'url'     => $url,
+			'subdir'  => $subdir,
+			'basedir' => $basedir,
+			'baseurl' => $baseurl,
+			'error'   => false,
+		) );
 
 	// Make sure we have an uploads dir
 	if ( ! wp_mkdir_p( $uploads['path'] ) ) {
 		$message = sprintf( __( 'Unable to create directory %s. Is its parent directory writable by the server?' ), $uploads['path'] );
-		return array( 'error' => $message );
+		$uploads['error'] = $message;
 	}
 
 	return $uploads;
@@ -1922,8 +1934,6 @@ function wp_die( $message = '', $title = '', $args = array() ) {
 		$function = apply_filters( 'wp_die_ajax_handler', '_ajax_wp_die_handler' );
 	elseif ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
 		$function = apply_filters( 'wp_die_xmlrpc_handler', '_xmlrpc_wp_die_handler' );
-	elseif ( defined( 'APP_REQUEST' ) && APP_REQUEST )
-		$function = apply_filters( 'wp_die_app_handler', '_scalar_wp_die_handler' );
 	else
 		$function = apply_filters( 'wp_die_handler', '_default_wp_die_handler' );
 
@@ -2551,6 +2561,10 @@ function wp_maybe_load_widgets() {
  */
 function wp_widgets_add_menu() {
 	global $submenu;
+
+	if ( ! current_theme_supports( 'widgets' ) )
+		return;
+
 	$submenu['themes.php'][7] = array( __( 'Widgets' ), 'edit_theme_options', 'widgets.php' );
 	ksort( $submenu['themes.php'], SORT_NUMERIC );
 }
@@ -3601,7 +3615,7 @@ function wp_allowed_protocols() {
 	static $protocols;
 
 	if ( empty( $protocols ) ) {
-		$protocols = array( 'http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'svn', 'tel', 'fax' );
+		$protocols = array( 'http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'svn', 'tel', 'fax', 'xmpp' );
 		$protocols = apply_filters( 'kses_allowed_protocols', $protocols );
 	}
 
