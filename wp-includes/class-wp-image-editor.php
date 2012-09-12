@@ -105,7 +105,7 @@ abstract class WP_Image_Editor {
 		return "{$this->size['width']}x{$this->size['height']}";
 	}
 
-	protected function make_image( $function, $arguments ) {
+	protected function make_image( $filename, $function, $arguments ) {
 		$dst_file = $filename;
 
 		if ( $stream = wp_is_stream( $filename ) ) {

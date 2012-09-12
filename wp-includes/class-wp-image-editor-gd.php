@@ -236,7 +236,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		}
 
 		if ( 'image/gif' == $this->orig_type ) {
-			if ( ! $this->make_image( 'imagegif', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		elseif ( 'image/png' == $this->orig_type ) {
@@ -244,11 +244,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
-			if ( ! $this->make_image( 'imagepng', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $destfilename, 'imagepng', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		else {
-			if ( ! $this->make_image( 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
+			if ( ! $this->make_image( $destfilename, 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 
