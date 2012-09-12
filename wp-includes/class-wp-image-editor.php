@@ -96,11 +96,12 @@ abstract class WP_Image_Editor {
 	}
 
 	/**
-	 * Sets quality of image, in percent (1-100%).
+	 * Sets Image Compression quality on a 1-100% scale.
 	 *
 	 * @since 3.5.0
 	 *
 	 * @param int $quality 1-100
+	 * @return boolean
 	 */
 	public function set_quality( $quality ) {
 		$this->quality = apply_filters( 'wp_editor_set_quality', $quality );
