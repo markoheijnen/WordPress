@@ -50,7 +50,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Sets Image Compression quality on a 0-100% scale.
+	 * Sets Image Compression quality on a 1-100% scale.
 	 *
 	 * @param int $quality
 	 * @return boolean|WP_Error
