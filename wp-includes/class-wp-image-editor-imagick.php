@@ -40,7 +40,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$this->orig_type = $this->image->getImageFormat();
 		}
 		catch ( Exception $e ) {
-			return new WP_Error( 'error_loading_image',  $e->getMessage(), $this->file );
+			return new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
 		}
 
 		$this->update_size();

@@ -36,7 +36,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return true;
 
 		if ( ! file_exists( $this->file ) )
-			return WP_Error( 'error_loading_image',  __('File doesn&#8217;t exist?'), $this->file );
+			return WP_Error( 'error_loading_image', __('File doesn&#8217;t exist?'), $this->file );
 
 		// Set artificially high because GD uses uncompressed images in memory
 		@ini_set( 'memory_limit', apply_filters( 'image_memory_limit', WP_MAX_MEMORY_LIMIT ) );
@@ -95,7 +95,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return $resized;
 		}
 
-		return WP_Error( 'image_resize_error',  'Image resize failed.', $this->file );
+		return WP_Error( 'image_resize_error', __('Image resize failed.'), $this->file );
 	}
 
 	/**
@@ -161,7 +161,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return true;
 		}
 
-		return WP_Error( 'image_crop_error',  'Image crop failed.', $this->file );
+		return WP_Error( 'image_crop_error', __('Image crop failed.'), $this->file );
 	}
 
 	/**
@@ -182,7 +182,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 				return true;
 			}
 		}
-		return WP_Error( 'image_rotate_error',  'Image rotate failed.', $this->file );
+		return WP_Error( 'image_rotate_error', __('Image rotate failed.'), $this->file );
 	}
 
 	/**
@@ -208,7 +208,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 				return true;
 			}
 		}
-		return WP_Error( 'image_flip_error',  'Image flip failed.', $this->file );
+		return WP_Error( 'image_flip_error', __('Image flip failed.'), $this->file );
 	}
 
 	/**

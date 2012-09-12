@@ -461,7 +461,7 @@ function stream_preview_image($post_id) {
 
 	$img = WP_Image_Editor::get_instance( _load_image_to_edit_path( $post_id ) );
 
-    if ( is_wp_error( $img) )
+    if ( is_wp_error( $img ) )
         return false;
 
 	$changes = !empty($_REQUEST['history']) ? json_decode( stripslashes($_REQUEST['history']) ) : null;
