@@ -236,7 +236,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 
 		if ( 'image/gif' == $this->orig_type ) {
 			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
-				return new WP_Error( 'image_save_error', __( 'Image Editor Save Failed' ) );
+				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		elseif ( 'image/png' == $this->orig_type ) {
 			// convert from full colors to index colors, like original PNG.
@@ -244,11 +244,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
 			if ( ! $this->make_image( $destfilename, 'imagepng', array( $image, $destfilename ) ) )
-				return new WP_Error( 'image_save_error', __( 'Image Editor Save Failed' ) );
+				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		else {
 			if ( ! $this->make_image( $destfilename, 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
-				return new WP_Error( 'image_save_error', __( 'Image Editor Save Failed' ) );
+				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 
 		// Set correct file permissions
