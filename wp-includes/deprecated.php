@@ -3271,7 +3271,13 @@ function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $de
 	if ( is_wp_error( $resized ) )
 		return $resized;
 
-	return $editor->save( $editor->generate_filename( $suffix, $dest_path ) );
+	$dest_file = $editor->generate_filename( $suffix, $dest_path );
+	$saved = $editor->save( $dest_file );
+
+	if ( is_wp_error( $saved ) )
+		return $saved;
+
+	return $dest_file;
 }
 
 /**
