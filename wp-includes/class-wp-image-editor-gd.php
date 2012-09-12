@@ -102,6 +102,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Processes current image and saves to disk
 	 * multiple sizes from single source.
 	 *
+	 * @param array $sizes { {width, height}, ... }
 	 * @return array
 	 */
 	public function multi_resize( $sizes ) {
@@ -128,7 +129,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	/**
-	 * Ported from image.php
+	 * Crops Image.
 	 *
 	 * @param float $x
 	 * @param float $y
@@ -185,7 +186,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	/**
-	 * Ported from image-edit.php
+	 * Flips current image
 	 *
 	 * @param boolean $horz
 	 * @param boolean $vert

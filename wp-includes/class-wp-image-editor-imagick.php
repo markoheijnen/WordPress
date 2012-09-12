@@ -17,6 +17,11 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return true;
 	}
 
+	/**
+	 * Load image in $file into new Imagick Object
+	 * 
+	 * @return boolean|\WP_Error
+	 */
 	protected function load() {
 		if ( $this->image )
 			return true;
@@ -45,6 +50,12 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return true;
 	}
 
+	/**
+	 * Sets Image Compression quality on a 0-100% scale.
+	 * 
+	 * @param int $quality
+	 * @return boolean|WP_Error
+	 */
 	public function set_quality( $quality = null ) {
 		$quality = $quality ?: $this->quality;
 
