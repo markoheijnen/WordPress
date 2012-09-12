@@ -104,4 +104,33 @@ abstract class WP_Image_Editor {
 
 		return "{$this->size['width']}x{$this->size['height']}";
 	}
+
+	protected function make_image( $function, $arguments ) {
+		$dst_file = $filename;
+
+		if ( $stream = wp_is_stream( $filename ) ) {
+			$filename = null;
+			ob_start();
+		}
+
+		$result = call_user_func_array( $function, $arguments );
+
+		if( $result && $stream ) {
+			$contents = ob_get_contents();
+
+			$fp = fopen( $dst_file, 'w' );
+
+			if( ! $fp )
+				return false;
+
+			fwrite( $fp, $contents );
+			fclose( $fp );
+		}
+
+		if( $stream ) {
+			ob_end_clean();
+		}
+
+		return $result;
+	}
 }

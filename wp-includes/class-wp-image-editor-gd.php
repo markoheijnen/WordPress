@@ -236,7 +236,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		}
 
 		if ( 'image/gif' == $this->orig_type ) {
-			if ( ! $this->make_image( 'imagegif', $image, $destfilename ) )
+			if ( ! $this->make_image( 'imagegif', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		elseif ( 'image/png' == $this->orig_type ) {
@@ -244,11 +244,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
-			if ( ! $this->make_image( 'imagepng', $image, $destfilename ) )
+			if ( ! $this->make_image( 'imagepng', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 		else {
-			if ( ! $this->make_image( 'imagejpeg', $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) )
+			if ( ! $this->make_image( 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
 				return new WP_Error( 'image_editor_save_failed', __( 'Image Editor Save Failed' ) );
 		}
 
@@ -280,34 +280,5 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 				header( 'Content-Type: image/jpeg' );
 				return imagejpeg( $this->image, null, $this->quality );
 		}
-	}
-
-	protected function make_image( $function, $image, $filename, $quality = -1, $filters = null ) {
-		$dst_file = $filename;
-
-		if ( $stream = wp_is_stream( $filename ) ) {
-			$filename = null;
-			ob_start();
-		}
-
-		$result = call_user_func( $function, $image, $filename, $quality, $filters );
-
-		if( $result && $stream ) {
-			$contents = ob_get_contents();
-
-			$fp = fopen( $dst_file, 'w' );
-
-			if( ! $fp )
-				return false;
-
-			fwrite( $fp, $contents );
-			fclose( $fp );
-		}
-
-		if( $stream ) {
-			ob_end_clean();
-		}
-
-		return $result;
 	}
 }
