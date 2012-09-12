@@ -104,7 +104,7 @@ abstract class WP_Image_Editor {
 	 */
 	public function set_quality( $quality ) {
 		$this->quality = apply_filters( 'wp_editor_set_quality', $quality );
-		
+
 		return ( (bool) $this->quality );
 	}
 

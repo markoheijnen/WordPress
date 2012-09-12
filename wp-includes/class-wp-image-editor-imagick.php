@@ -19,7 +19,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 	/**
 	 * Load image in $file into new Imagick Object
-	 * 
+	 *
 	 * @return boolean|\WP_Error
 	 */
 	protected function load() {
@@ -38,7 +38,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			// Select the first frame to handle animated GIFs properly
 			$this->image->setIteratorIndex(0);
 			$this->orig_type = $this->image->getImageFormat();
-	
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'error_loading_image',  $e->getMessage(), $this->file );
@@ -52,7 +51,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 	/**
 	 * Sets Image Compression quality on a 0-100% scale.
-	 * 
+	 *
 	 * @param int $quality
 	 * @return boolean|WP_Error
 	 */
@@ -69,7 +68,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			}
 		}
 		catch ( Exception $e ) {
-			return new WP_Error( 'image_quality_error', $e->getMessage() );			
+			return new WP_Error( 'image_quality_error', $e->getMessage() );
 		}
 
 		return parent::set_quality( $quality );
@@ -177,7 +176,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				$dst_h = $dst_h ?: $src_h;
 
 				$this->image->scaleImage( $dst_w, $dst_h );
-				return $this->update_size( $dst_w, $dst_h );;
+				return $this->update_size( $dst_w, $dst_h );
 			}
 		}
 		catch ( Exception $e ) {
@@ -205,7 +204,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		catch ( Exception $e ) {
 			return new WP_Error( 'image_rotate_error', $e->getMessage() );
 		}
-		return $this->update_size();	
+		return $this->update_size();
 	}
 
 	/**
@@ -291,7 +290,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 				break;
 		}
 
-		try {		
+		try {
 			print $this->image->getImageBlob();
 		}
 		catch ( Exception $e ) {
