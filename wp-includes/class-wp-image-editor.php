@@ -8,6 +8,8 @@ abstract class WP_Image_Editor {
 
 	protected function __construct( $filename ) {
 		$this->file = $filename;
+
+		return $this->load();
 	}
 
 	public final static function get_instance( $path ) {
@@ -61,9 +63,6 @@ abstract class WP_Image_Editor {
 	abstract public function stream();
 
 	public function get_size() {
-		if ( ! $this->load() )
-			return false;
-
 		return $this->size;
 	}
 
@@ -79,9 +78,6 @@ abstract class WP_Image_Editor {
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null ) {
-		if ( ! $this->load() )
-			return false;
-
 		// $suffix will be appended to the destination filename, just before the extension
 		$suffix = $this->get_suffix();
 

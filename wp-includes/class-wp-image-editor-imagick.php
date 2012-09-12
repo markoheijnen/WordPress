@@ -61,9 +61,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	protected function update_size( $width = null, $height = null ) {
-		if ( ! $this->load() )
-			return false;
-
 		$size = null;
 		if ( !$width || !$height ) {
 			try {
@@ -78,9 +75,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
-		if ( ! $this->load() )
-			return false;
-
 		$dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
 		if ( ! $dims )
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
@@ -106,9 +100,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 */
 	public function multi_resize( $sizes ) {
 		$metadata = array();
-		if ( ! $this->load() )
-			return $metadata;
-
 		$orig_size = $this->size;
 		$orig_image = $this->image->getImage();
 		foreach ( $sizes as $size => $size_data ) {
@@ -146,9 +137,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
-		if ( ! $this->load() )
-			return false;
-
 		// Not sure this is compatible.
 		if ( $src_abs ) {
 			$src_w -= $src_x;
@@ -183,9 +171,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public function rotate( $angle ) {
-		if ( ! $this->load() )
-			return false;
-
 		/**
 		 * $angle is 360-$angle because Imagick rotates clockwise
 		 * (GD rotates counter-clockwise)
@@ -207,9 +192,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @returns boolean
 	 */
 	public function flip( $horz, $vert ) {
-		if ( ! $this->load() )
-			return false;
-
 		try {
 			if ( $horz )
 				$this->image->flipImage();
@@ -240,9 +222,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	protected function _save( $image, $destfilename = null ) {
-		if ( ! $this->load() )
-			return false;
-
 		if ( null == $destfilename ) {
 			$destfilename = $this->generate_filename();
 		}
@@ -273,9 +252,6 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public function stream() {
-		if ( ! $this->load() )
-			return false;
-
 		switch ( $this->orig_type ) {
 			case 'PNG':
 				header( 'Content-Type: image/png' );
