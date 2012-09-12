@@ -122,6 +122,7 @@ abstract class WP_Image_Editor {
 		}
 
 		$name = wp_basename( $this->file, ".$ext" );
+		$ext = strtolower( $ext );
 
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
 			$dir = $_dest_path;
