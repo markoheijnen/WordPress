@@ -5,6 +5,7 @@ abstract class WP_Image_Editor {
 	protected $size = null;
 	protected $orig_type  = null;
 	protected $quality = 90;
+	protected $error = null;
 
 	protected function __construct( $filename ) {
 		$this->file = $filename;
@@ -23,8 +24,12 @@ abstract class WP_Image_Editor {
 	public final static function get_instance( $path ) {
 		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
 
-		if ( $implementation )
-			return new $implementation( $path );
+		if ( $implementation ) {
+			$editor = new $implementation( $path );
+			if ( !empty($editor->error) )
+				return $editor->error;
+			return $editor;
+		}
 
 		return false;
 	}
