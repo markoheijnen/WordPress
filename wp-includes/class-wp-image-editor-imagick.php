@@ -230,7 +230,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$image->stripImage();
 		}
 
-		$image->writeImage( $destfilename );
+		$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
 
 		// Set correct file permissions
 		$stat = stat( dirname( $destfilename ) );
