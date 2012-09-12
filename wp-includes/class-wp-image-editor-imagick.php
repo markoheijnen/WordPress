@@ -256,7 +256,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
 		}
 		catch ( Exception $e ) {
-			return new WP_Error( 'image_save_error', $e->getMessage() );
+			return new WP_Error( 'image_save_error', $e->getMessage(), $destfilename );
 		}
 
 		// Set correct file permissions

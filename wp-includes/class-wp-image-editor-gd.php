@@ -76,14 +76,17 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			$this->image = $resized;
 
 			return true;
-		}
-		return new WP_Error( 'image_resize_error', $e->getMessage() );
+
+		} elseif ( is_wp_error( $resized ) )
+			return $resized;
+
+		return new WP_Error( 'image_resize_error', __('Image resize failed.'), $this->file );
 	}
 
 	protected function _resize( $max_w, $max_h, $crop = false ) {
 		$dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
 		if ( ! $dims ) {
-			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
+			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions'), $this->file );
 		}
 		list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
 
