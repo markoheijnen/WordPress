@@ -31,32 +31,28 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @return boolean|\WP_Error
 	 */
-	protected function load() {		
+	protected function load() {
 		if ( $this->image )
 			return true;
 
-		if ( ! file_exists( $this->file ) ) {
-			$this->error = new WP_Error( 'error_loading_image', __('File doesn&#8217;t exist?'), $this->file );
-			return false;
-		}
+		if ( ! file_exists( $this->file ) )
+			return new WP_Error( 'error_loading_image', __('File doesn&#8217;t exist?'), $this->file );
 
 		// Set artificially high because GD uses uncompressed images in memory
 		@ini_set( 'memory_limit', apply_filters( 'image_memory_limit', WP_MAX_MEMORY_LIMIT ) );
 		$this->image = @imagecreatefromstring( file_get_contents( $this->file ) );
 
-		if ( ! is_resource( $this->image ) ) {
-			$this->error = new WP_Error( 'invalid_image', __('File is not an image.'), $this->file );
-			return false;
-		}
+		if ( ! is_resource( $this->image ) )
+			return new WP_Error( 'invalid_image', __('File is not an image.'), $this->file );
 
 		$size = @getimagesize( $this->file );
-		if ( ! $size ) {
-			$this->error = new WP_Error( 'invalid_image', __('Could not read image size.'), $this->file );
-			return false;
-		}
+		if ( ! $size )
+			return new WP_Error( 'invalid_image', __('Could not read image size.'), $this->file );
 
 		$this->update_size( $size[0], $size[1] );
 		$this->orig_type = $size['mime'];
+
+		return true;
 	}
 
 	protected function update_size( $width = false, $height = false ) {

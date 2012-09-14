@@ -5,12 +5,9 @@ abstract class WP_Image_Editor {
 	protected $size = null;
 	protected $orig_type  = null;
 	protected $quality = 90;
-	protected $error = null;
 
 	protected function __construct( $filename ) {
 		$this->file = $filename;
-
-		return $this->load();
 	}
 
 	/**
@@ -19,15 +16,18 @@ abstract class WP_Image_Editor {
 	 * @since 3.5.0
 	 *
 	 * @param string $path
-	 * @return WP_Image_Editor|boolean
+	 * @return WP_Image_Editor|WP_Error|boolean
 	 */
 	public final static function get_instance( $path ) {
 		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
 
 		if ( $implementation ) {
 			$editor = new $implementation( $path );
-			if ( !empty($editor->error) )
-				return $editor->error;
+			$loaded = $editor->load();
+
+			if ( is_wp_error ( $loaded ) )
+				return $loaded;
+
 			return $editor;
 		}
 

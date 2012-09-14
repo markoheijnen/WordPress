@@ -26,30 +26,28 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		if ( $this->image )
 			return true;
 
-		if ( ! file_exists( $this->file ) ) {
-			$this->error = new WP_Error( 'error_loading_image', __('File doesn&#8217;t exist?'), $this->file );
-			return false;
-		}
+		if ( ! file_exists( $this->file ) )
+			return new WP_Error( 'error_loading_image', __('File doesn&#8217;t exist?'), $this->file );
 
 		try {
 			$this->image = new Imagick( $this->file );
 
-			if( ! $this->image->valid() ) {
-				$this->error = new WP_Error( 'invalid_image', __('File is not an image.'), $this->file);
-				return false;
-			}
+			if( ! $this->image->valid() )
+				return new WP_Error( 'invalid_image', __('File is not an image.'), $this->file);
 
 			// Select the first frame to handle animated GIFs properly
 			$this->image->setIteratorIndex(0);
 			$this->orig_type = $this->image->getImageFormat();
 		}
 		catch ( Exception $e ) {
-			$this->error = new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
-			return false;
+			return new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
 		}
 
-		$this->update_size();
-		$this->set_quality();
+		$updated_size = $this->update_size();
+		if ( is_wp_error( $updated_size ) )
+				return $updated_size;
+
+		return $this->set_quality();
 	}
 
 	/**
