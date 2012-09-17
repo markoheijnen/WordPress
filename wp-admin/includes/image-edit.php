@@ -237,7 +237,7 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 }
 
 /**
- * @TODO: Public function that accepts GD images as input.
+ * Saves Image to File
  * @TODO: Add mime_type support to WP_Image_Editor
  *
  * @param string $filename
