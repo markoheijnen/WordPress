@@ -69,12 +69,14 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
+		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
+			return true;
+
 		$resized = $this->_resize( $max_w, $max_h, $crop );
 
 		if ( is_resource( $resized ) ) {
 			imagedestroy( $this->image );
 			$this->image = $resized;
-
 			return true;
 
 		} elseif ( is_wp_error( $resized ) )

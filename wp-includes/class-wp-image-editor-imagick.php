@@ -90,6 +90,9 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
+		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
+			return true;
+
 		$dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
 		if ( ! $dims )
 			return new WP_Error( 'error_getting_dimensions', __('Could not calculate resized image dimensions') );
