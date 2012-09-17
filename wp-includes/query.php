@@ -1787,13 +1787,13 @@ class WP_Query {
 		// Tag stuff
 		if ( '' != $q['tag'] && !$this->is_singular && $this->query_vars_changed ) {
 			if ( strpos($q['tag'], ',') !== false ) {
-				$tags = preg_split('/[,\s]+/', $q['tag']);
+				$tags = preg_split('/[,\r\n\t ]+/', $q['tag']);
 				foreach ( (array) $tags as $tag ) {
 					$tag = sanitize_term_field('slug', $tag, 0, 'post_tag', 'db');
 					$q['tag_slug__in'][] = $tag;
 				}
-			} else if ( preg_match('/[+\s]+/', $q['tag']) || !empty($q['cat']) ) {
-				$tags = preg_split('/[+\s]+/', $q['tag']);
+			} else if ( preg_match('/[+\r\n\t ]+/', $q['tag']) || !empty($q['cat']) ) {
+				$tags = preg_split('/[+\r\n\t ]+/', $q['tag']);
 				foreach ( (array) $tags as $tag ) {
 					$tag = sanitize_term_field('slug', $tag, 0, 'post_tag', 'db');
 					$q['tag_slug__and'][] = $tag;
@@ -2220,7 +2220,16 @@ class WP_Query {
 
 		if ( $this->is_tax ) {
 			if ( empty($post_type) ) {
-				$post_type = 'any';
+				// Do a fully inclusive search for currently registered post types of queried taxonomies
+				$post_type = array();
+				$taxonomies = wp_list_pluck( $this->tax_query->queries, 'taxonomy' );
+				foreach ( get_post_types( array( 'exclude_from_search' => false ) ) as $pt ) {
+					if ( array_intersect( $taxonomies, get_object_taxonomies( $pt ) ) )
+						$post_type[] = $pt;
+				}
+				if ( ! $post_type )
+					$post_type = 'any';
+
 				$post_status_join = true;
 			} elseif ( in_array('attachment', (array) $post_type) ) {
 				$post_status_join = true;

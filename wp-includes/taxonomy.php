@@ -765,12 +765,11 @@ class WP_Tax_Query {
 	 * Transforms a single query, from one field to another.
 	 *
 	 * @since 3.2.0
-	 * @access private
 	 *
 	 * @param array &$query The single query
 	 * @param string $resulting_field The resulting field
 	 */
-	private function transform_query( &$query, $resulting_field ) {
+	public function transform_query( &$query, $resulting_field ) {
 		global $wpdb;
 
 		if ( empty( $query['terms'] ) )
@@ -1681,7 +1680,7 @@ function sanitize_term_field($field, $value, $term_id, $taxonomy, $context) {
  *
  * @param string $taxonomy Taxonomy name
  * @param array|string $args Overwrite defaults. See get_terms()
- * @return int How many terms are in $taxonomy
+ * @return int|WP_Error How many terms are in $taxonomy. WP_Error if $taxonomy does not exist.
  */
 function wp_count_terms( $taxonomy, $args = array() ) {
 	$defaults = array('hide_empty' => false);

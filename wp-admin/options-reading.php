@@ -18,10 +18,9 @@ $parent_file = 'options-general.php';
 /**
  * Display JavaScript on the page.
  *
- * @package WordPress
- * @subpackage Reading_Settings_Screen
+ * @since 3.5.0
  */
-function add_js() {
+function options_reading_add_js() {
 ?>
 <script type="text/javascript">
 //<![CDATA[
@@ -39,7 +38,17 @@ function add_js() {
 </script>
 <?php
 }
-add_action('admin_head', 'add_js');
+add_action('admin_head', 'options_reading_add_js');
+
+/**
+ * Render the blog charset setting.
+ *
+ * @since 3.5.0
+ */
+function options_reading_blog_charset() {
+	echo '<input name="blog_charset" type="text" id="blog_charset" value="' . esc_attr( get_option( 'blog_charset' ) ) . '" class="regular-text" />';
+	echo '<p class="description">' . __( 'The <a href="http://codex.wordpress.org/Glossary#Character_set">character encoding</a> of your site (UTF-8 is recommended)' ) . '</p>';
+}
 
 get_current_screen()->add_help_tab( array(
 	'id'      => 'overview',
@@ -74,15 +83,8 @@ include( './admin-header.php' );
 <?php
 settings_fields( 'reading' );
 
-function options_reading_blog_charset() {
-	echo '<input name="blog_charset" type="text" id="blog_charset" value="' . esc_attr( get_option( 'blog_charset' ) ) . '" class="regular-text" />';
-	echo '<p class="description">' . __( 'The <a href="http://codex.wordpress.org/Glossary#Character_set">character encoding</a> of your site (UTF-8 is recommended)' ) . '</p>';
-}
-
 if ( ! in_array( get_option( 'blog_charset' ), array( 'utf8', 'utf-8', 'UTF8', 'UTF-8' ) ) )
-	add_settings_field( 'blog_charset', __( 'Encoding for pages and feeds' ), 'options_reading_blog_charset', 'reading' );
-else
-	echo '<input name="blog_charset" type="hidden" id="blog_charset" value="' . esc_attr( get_option( 'blog_charset' ) ) . '" />';
+	add_settings_field( 'blog_charset', __( 'Encoding for pages and feeds' ), 'options_reading_blog_charset', 'reading', 'default', array( 'label_for' => 'blog_charset' ) );
 ?>
 
 <?php if ( ! get_pages() ) : ?>
@@ -144,15 +146,15 @@ else :
 <td><fieldset><legend class="screen-reader-text"><span><?php has_action( 'blog_privacy_selector' ) ? _e( 'Site Visibility' ) : _e( 'Search Engine Visibility' ); ?> </span></legend>
 <?php if ( has_action( 'blog_privacy_selector' ) ) : ?>
 	<input id="blog-public" type="radio" name="blog_public" value="1" <?php checked('1', get_option('blog_public')); ?> />
-	<label for="blog-public"><?php _e( 'Allow search engines to index this site.' );?></label><br/>
+	<label for="blog-public"><?php _e( 'Allow search engines to index this site' );?></label><br/>
 	<input id="blog-norobots" type="radio" name="blog_public" value="0" <?php checked('0', get_option('blog_public')); ?> />
-	<label for="blog-norobots"><?php _e( 'Ask search engines not to index this site.' ); ?></label>
+	<label for="blog-norobots"><?php _e( 'Discourage search engines from indexing this site' ); ?></label>
 	<p class="description"><?php _e( 'Note: Neither of these options blocks access to your site &mdash; it is up to search engines to honor your request.' ); ?></p>
 	<?php do_action('blog_privacy_selector'); ?>
 <?php else : ?>
-	<label for="blog_public"><input name="blog_public" type="checkbox" id="blog_public" value="1" <?php checked( '1', get_option( 'blog_public' ) ); ?> />
-	<?php _e( 'Allow search engines to index this site' ); ?>
-	<p class="description"><?php _e( 'It is up to search engines to honor a request to not index this site.' ); ?></p>
+	<label for="blog_public"><input name="blog_public" type="checkbox" id="blog_public" value="0" <?php checked( '0', get_option( 'blog_public' ) ); ?> />
+	<?php _e( 'Discourage search engines from indexing this site' ); ?></label>
+	<p class="description"><?php _e( 'It is up to search engines to honor this request.' ); ?></p>
 <?php endif; ?>
 </fieldset></td>
 </tr>
