@@ -11,7 +11,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	public static function test() {
-		if ( ! extension_loaded('imagick') )
+		if ( ! extension_loaded( 'imagick' ) )
 			return false;
 
 		return true;
