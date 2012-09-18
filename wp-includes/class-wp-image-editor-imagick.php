@@ -238,27 +238,43 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * Saves current image to file
 	 *
 	 * @param string $destfilename
+	 * @param string $mime_type
 	 * @return array
 	 */
-	public function save( $destfilename = null ) {
-		$saved = $this->_save( $this->image, $destfilename );
+	public function save( $destfilename = null, $mime_type = null ) {
+		$saved = $this->_save( $this->image, $destfilename, $mime_type );
 
-		if ( ! is_wp_error( $saved ) && $destfilename )
-			$this->file = $destfilename;
+		if ( ! is_wp_error( $saved ) ) {
+			$this->file = $destfilename ?: $this->file;
+			$this->orig_type = $mime_type ?: $this->orig_type;
+		}
 
 		return $saved;
 	}
 
-	protected function _save( $image, $destfilename = null ) {
-		if ( null == $destfilename ) {
-			$destfilename = $this->generate_filename();
-		}
+	protected function _save( $image, $destfilename = null, $mime_type = null ) {
+		$mime_type = $mime_type ?: $this->orig_type;
 
 		try {
 			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
 				$image->stripImage();
 			}
 
+			$imagick_extension = null;
+			switch ( $mime_type ) {
+				case 'image/png':
+					$imagick_extension = 'PNG';
+					break;
+				case 'image/gif':
+					$imagick_extension = 'GIF';
+					break;
+				default:
+					$imagick_extension = 'JPG';
+			}
+
+			$destfilename = $destfilename ?: $this->generate_filename( null, null, $imagick_extension );
+
+			$this->image->setImageFormat( $imagick_extension );
 			$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
 		}
 		catch ( Exception $e ) {
@@ -281,10 +297,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	/**
 	 * Streams current image to browser
 	 *
-	 * @return boolean
+	 * @param string $mime_type
+	 * @return boolean|WP_Error
 	 */
-	public function stream() {
-		switch ( $this->orig_type ) {
+	public function stream( $mime_type = null ) {
+		$mime_type = $mime_type ?: $this->orig_type;
+
+		switch ( $mime_type ) {
 			case 'PNG':
 				header( 'Content-Type: image/png' );
 				break;

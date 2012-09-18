@@ -220,27 +220,32 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Saves current in-memory image to file
 	 *
 	 * @param string $destfilename
+	 * @param string $mime_type
 	 * @return array
 	 */
-	public function save( $destfilename = null ) {
-		$saved = $this->_save( $this->image, $destfilename );
+	public function save( $destfilename = null, $mime_type = null ) {
+		$saved = $this->_save( $this->image, $destfilename, $mime_type );
 
-		if ( ! is_wp_error( $saved ) && $destfilename )
-			$this->file = $destfilename;
+		if ( ! is_wp_error( $saved ) ) {
+			$this->file = $destfilename ?: $this->file;
+			$this->orig_type = $mime_type ?: $this->orig_type;
+		}
 
 		return $saved;
 	}
 
-	protected function _save( $image, $destfilename = null ) {
-		if ( null == $destfilename ) {
-			$destfilename = $this->generate_filename();
-		}
+	protected function _save( $image, $destfilename = null, $mime_type = null ) {
+		$mime_type = $mime_type ?: $this->orig_type;
+		/**
+		 * Correct Filename, to comply with Imagick's mime_type annoyance.
+		 * $destfilename = $destfilename ?: $this->generate_filename( null, null, );
+		 */
 
-		if ( 'image/gif' == $this->orig_type ) {
+		if ( 'image/gif' == $mime_type ) {
 			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
-		elseif ( 'image/png' == $this->orig_type ) {
+		elseif ( 'image/png' == $mime_type ) {
 			// convert from full colors to index colors, like original PNG.
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
@@ -268,8 +273,12 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 
 	/**
 	 * Returns stream of current image
+	 * 
+	 * @param string $mime_type
 	 */
-	public function stream() {
+	public function stream( $mime_type = null ) {
+		$mime_type = $mime_type ?: $this->orig_type;
+
 		switch ( $this->orig_type ) {
 			case 'image/png':
 				header( 'Content-Type: image/png' );
