@@ -6,6 +6,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	function __destruct() {
 		if ( $this->image ) {
 			// we don't need the original in memory anymore
+			$this->image->clear();
 			$this->image->destroy();
 		}
 	}
@@ -137,6 +138,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			if( ! is_wp_error( $resize_result ) ) {
 				$resized = $this->save();
 
+				$this->image->clear();
 				$this->image->destroy();
 				$this->image = null;
 				unset( $resized['path'] );
