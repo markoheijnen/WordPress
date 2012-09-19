@@ -303,14 +303,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	public function stream( $mime_type = null ) {
 		$extension = $this->orig_type;
 		if ( $mime_type ) {
-			$extension = $this->get_extension( $mime_type );
+			$extension = strtoupper( $this->get_extension( $mime_type ) );
 		} else {
 			$mime_type = $this->get_mime_type( $imagick_type );
 		}
 
 		try {
 			if ( !( $extension || $mime_type)  ||
-					! $this->image->queryFormats( strtoupper($extension) ) ) {
+					! $this->image->queryFormats( $extension ) ) {
 				$extension = 'JPG';
 				$mime_type = 'image/jpeg';
 			}
