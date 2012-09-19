@@ -301,22 +301,29 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
-
-		switch ( $mime_type ) {
-			case 'PNG':
-				header( 'Content-Type: image/png' );
-				break;
-			case 'GIF':
-				header( 'Content-Type: image/gif' );
-				break;
-			default:
-				header( 'Content-Type: image/jpeg' );
-				break;
+		$extension = $this->orig_type;
+		if ( $mime_type ) {
+			$extension = $this->get_extension( $mime_type );
+		} else {
+			$mime_type = $this->get_mime_type( $imagick_type );
 		}
 
 		try {
+			if ( !( $extension || $mime_type)  ||
+					! $this->image->queryFormats( strtoupper($extension) ) ) {
+				$extension = 'JPG';
+				$mime_type = 'image/jpeg';
+			}
+
+			// Temporarily change format for stream
+			$this->image->setImageFormat( $extension );
+
+			// Output stream of image content
+			header( "Content-Type: $mime_type" );
 			print $this->image->getImageBlob();
+
+			// Reset Image to original Format
+			$this->image->setImageFormat( $this->orig_type );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'image_stream_error', $e->getMessage() );
