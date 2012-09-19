@@ -186,7 +186,7 @@ abstract class WP_Image_Editor {
 	}
 
 	static protected function get_extension( $mime_type ) {
-		$extensions = explode( '|' array_search( $mime_type, wp_get_mimetypes() ) );
+		$extensions = explode( '|', array_search( $mime_type, wp_get_mime_types() ) );
 
 		return $extensions[0];
 	}
