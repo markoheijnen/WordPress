@@ -235,11 +235,22 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ? $mime_type : $this->orig_type;
-		/**
-		 * Correct Filename, to comply with Imagick's mime_type annoyance.
-		 * $destfilename = $destfilename ?: $this->generate_filename( null, null, );
-		 */
+		if( $mime_type ) {
+			if( $destfilename ) {
+				$destfilename = basename( $destfilename ) . '.' . $this->get_extension( $mime_type );
+			}
+			else {
+				$this->generate_filename( null, null, $this->get_extension( $mime_type ) );
+			}
+		}
+		else if ( $destfilename ) {
+			$ext = pathinfo( $destfilename, PATHINFO_EXTENSION );
+			$mime_type = $this->get_mime_type( $ext );
+		}
+		else {
+			$mime_type = $this->orig_type;
+			$destfilename = $this->generate_filename();
+		}
 
 		if ( 'image/gif' == $mime_type ) {
 			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
