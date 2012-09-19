@@ -329,7 +329,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 	}
 
 	public function write( $destfilename ) {
-		$this->run_convert( sprintf( $this->image . ' %s', escapeshellarg( $destfilename ) ) );
+		$this->run_convert( sprintf( $this->image . ' -quality %d %s', $this->quality, escapeshellarg( $destfilename ) ) );
 	}
 
 	/**
