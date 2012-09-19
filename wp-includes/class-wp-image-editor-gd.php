@@ -56,7 +56,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	protected function update_size( $width = false, $height = false ) {
-		return parent::update_size( $width ?: imagesx( $this->image ), $height ?: imagesy( $this->image ) );
+		return parent::update_size( $width ? $width : imagesx( $this->image ), $height ? $height : imagesy( $this->image ) );
 	}
 
 	/**
@@ -145,8 +145,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
 		// If destination width/height isn't specified, use same as
 		// width/height from source.
-		$dst_w = $dst_w ?: $src_w;
-		$dst_h = $dst_h ?: $src_h;
+		$dst_w = $dst_w ? $dst_w : $src_w;
+		$dst_h = $dst_h ? $dst_h : $src_h;
 		$dst = wp_imagecreatetruecolor( $dst_w, $dst_h );
 
 		if ( $src_abs ) {
@@ -227,18 +227,18 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		$saved = $this->_save( $this->image, $destfilename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $destfilename ?: $this->file;
-			$this->orig_type = $mime_type ?: $this->orig_type;
+			$this->file = $destfilename ? $destfilename : $this->file;
+			$this->orig_type = $mime_type ? $mime_type : $this->orig_type;
 		}
 
 		return $saved;
 	}
 
 	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
+		$mime_type = $mime_type ? $mime_type : $this->orig_type;
 		/**
 		 * Correct Filename, to comply with Imagick's mime_type annoyance.
-		 * $destfilename = $destfilename ?: $this->generate_filename( null, null, );
+		 * $destfilename = $destfilename ? $destfilename : $this->generate_filename( null, null, );
 		 */
 
 		if ( 'image/gif' == $mime_type ) {
@@ -277,7 +277,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @param string $mime_type
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
+		$mime_type = $mime_type ? $mime_type : $this->orig_type;
 
 		switch ( $this->orig_type ) {
 			case 'image/png':

@@ -58,7 +58,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function set_quality( $quality = null ) {
-		$quality = $quality ?: $this->quality;
+		$quality = $quality ? $quality : $this->quality;
 
 		try {
 			if( 'JPEG' == $this->orig_type ) {
@@ -87,7 +87,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			}
 		}
 
-		return parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
+		return parent::update_size( $width ? $width : $size['width'], $height ? $height : $size['height'] );
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
@@ -178,8 +178,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			if ( $dst_w || $dst_h ) {
 				// If destination width/height isn't specified, use same as
 				// width/height from source.
-				$dst_w = $dst_w ?: $src_w;
-				$dst_h = $dst_h ?: $src_h;
+				$dst_w = $dst_w ? $dst_w : $src_w;
+				$dst_h = $dst_h ? $dst_h : $src_h;
 
 				$this->image->scaleImage( $dst_w, $dst_h );
 				return $this->update_size( $dst_w, $dst_h );
@@ -245,15 +245,15 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		$saved = $this->_save( $this->image, $destfilename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $destfilename ?: $this->file;
-			$this->orig_type = $mime_type ?: $this->orig_type;
+			$this->file = $destfilename ? $destfilename : $this->file;
+			$this->orig_type = $mime_type ? $mime_type : $this->orig_type;
 		}
 
 		return $saved;
 	}
 
 	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
+		$mime_type = $mime_type ? $mime_type : $this->orig_type;
 
 		try {
 			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
@@ -272,7 +272,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 					$imagick_extension = 'JPG';
 			}
 
-			$destfilename = $destfilename ?: $this->generate_filename( null, null, $imagick_extension );
+			$destfilename = $destfilename ? $destfilename : $this->generate_filename( null, null, $imagick_extension );
 
 			$this->image->setImageFormat( $imagick_extension );
 			$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
@@ -301,7 +301,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
+		$mime_type = $mime_type ? $mime_type : $this->orig_type;
 
 		switch ( $mime_type ) {
 			case 'PNG':

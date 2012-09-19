@@ -116,11 +116,11 @@ abstract class WP_Image_Editor {
 
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
 		// $suffix will be appended to the destination filename, just before the extension
-		$suffix = $suffix ?: $this->get_suffix();
+		$suffix = $suffix ? $suffix : $this->get_suffix();
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
-		$ext  = strtolower( $extension ?: $info['extension'] );
+		$ext  = strtolower( $extension ? $extension : $info['extension'] );
 
 		// Convert any unrecognized formats to jpeg
 		if ( !in_array( $ext, array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {
