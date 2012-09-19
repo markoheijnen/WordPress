@@ -120,10 +120,10 @@ abstract class WP_Image_Editor {
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
-		$ext  = $extension ?: $info['extension'];
+		$ext  = strtolower( $extension ?: $info['extension'] );
 
 		// Convert any unrecognized formats to jpeg
-		if ( !in_array( strtolower( $ext ), array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {
+		if ( !in_array( $ext, array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {
 			$ext = 'jpg';
 		}
 

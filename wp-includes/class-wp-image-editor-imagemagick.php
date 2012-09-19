@@ -72,7 +72,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 				return new WP_Error( 'invalid_image', __('File is not an image.'), $this->file);
 			}
 
-			$this->orig_type = $identify[0];
+			$this->orig_type = 'image/' . strtolower( $identify[0] );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
@@ -96,11 +96,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 
 		try {
 			if( 'JPEG' == $this->orig_type ) {
-//				$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $quality, 'image_resize' ) );
-//				$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
-			}
-			else {
-//				$this->image->setImageCompressionQuality( $quality );
+				$quality = apply_filters( 'jpeg_quality', $quality, 'image_resize' );
 			}
 		}
 		catch ( Exception $e ) {
@@ -295,19 +291,19 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 				$this->run_convert( sprintf( $this->image . ' -strip' ) );
 			}
 
-			$imagick_extension = null;
+			$imagemagick_extension = null;
 			switch ( $mime_type ) {
 				case 'image/png':
-					$imagick_extension = 'PNG';
+					$imagemagick_extension = 'PNG';
 					break;
 				case 'image/gif':
-					$imagick_extension = 'GIF';
+					$imagemagick_extension = 'GIF';
 					break;
 				default:
-					$imagick_extension = 'JPG';
+					$imagemagick_extension = 'JPG';
 			}
 
-			$destfilename = $destfilename ?: $this->generate_filename( null, null, $imagick_extension );
+			$destfilename = $destfilename ?: $this->generate_filename( null, null, $imagemagick_extension );
 
 			$this->make_image( $destfilename, array( $this, 'write' ), array( $destfilename ) );
 		}
@@ -329,7 +325,19 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 	}
 
 	public function write( $destfilename ) {
-		$this->run_convert( sprintf( $this->image . ' -quality %d %s', $this->quality, escapeshellarg( $destfilename ) ) );
+		$imagemagick_extension = null;
+		switch ( $this->orig_type ) {
+			case 'image/png':
+				$imagemagick_extension = 'PNG';
+				break;
+			case 'image/gif':
+				$imagemagick_extension = 'GIF';
+				break;
+			default:
+				$imagemagick_extension = 'JPG';
+		}
+
+		$this->run_convert( sprintf( $this->image . ' -quality %d' . ( $imagemagick_extension == 'JPG' ? ' -compress JPEG ' : ' ' ) . '-format %s %s', $this->quality, escapeshellarg( $imagemagick_extension ), escapeshellarg( $destfilename ) ) );
 	}
 
 	/**
