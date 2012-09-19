@@ -7,6 +7,8 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 	function __destruct() {
 		if ( $this->image ) {
 			// we don't need the original in memory anymore
+			if ( file_exists( $this->image ) )
+				unlink( $this->image );
 			$this->image = null;
 		}
 	}
@@ -28,7 +30,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		}
 	}
 
-	function run_convert( $command, $returnbool = false, $debug = true ) {
+	function run_convert( $command, $returnbool = false, $debug = false ) {
 		if ( ! self::$convert_bin )
 			self::find_exec();
 
@@ -64,7 +66,8 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		try {
 			$identify = $this->run_convert( sprintf( $this->file . ' -format %s -identify null:', escapeshellarg( '%m' ) ) );
 			if ( $identify && in_array( strtolower( $identify[0] ), array( 'jpg', 'jpeg', 'jpe', 'gif', 'png' ) ) ) {
-				$this->image = $this->file;
+				$this->image = $this->generate_filename( 'temp' );
+				$this->run_convert( sprintf( $this->file . ' %s', escapeshellarg( $this->image ) ) );
 			} else {
 				return new WP_Error( 'invalid_image', __('File is not an image.'), $this->file);
 			}
@@ -111,7 +114,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		$size = null;
 		if ( !$width || !$height ) {
 			try {
-				$geometry = $this->run_convert( sprintf( $this->image . ' -format %s -identify null:', escapeshellarg( '{"size":{"width":"%w","height":"%h"}}' ) ) );
+				$geometry = $this->run_convert( sprintf( $this->image . ' -format %s -identify %s', escapeshellarg( '{"size":{"width":"%w","height":"%h"}}' ), escapeshellarg( $this->image ) ) );
 				$geometry = json_decode( $geometry[0] );
 
 				$size = $geometry->size;
@@ -139,7 +142,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 
 		try {
 			//$this->image->thumbnailImage( $dst_w, $dst_h );
-			$this->run_convert( sprintf( $this->image . ' -scale %dx%d -quality %d', $dst_w, $dst_h, $this->quality ) );
+			$this->run_convert( sprintf( $this->image . ' -scale %dx%d -quality %d %s', $dst_w, $dst_h, $this->quality, escapeshellarg( $this->image ) ) );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'image_resize_error', $e->getMessage() );
@@ -158,16 +161,19 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 	public function multi_resize( $sizes ) {
 		$metadata = array();
 		$orig_size = $this->size;
-		$orig_image = $this->file;
+		$orig_image = $this->image;
 		foreach ( $sizes as $size => $size_data ) {
 			if ( ! $this->image )
 				$this->image = $orig_image;
 
+			$this->image = $this->generate_filename( 'temp' );
+			$this->run_convert( sprintf( $this->file . ' %s', escapeshellarg( $this->image ) ) );
 			$resize_result = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $resize_result ) ) {
 				$resized = $this->save();
 
+				unlink( $this->image );
 				$this->image = null;
 				unset( $resized['path'] );
 
@@ -200,7 +206,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		}
 
 		try {
-			$this->run_convert( sprintf( $this->image . ' -crop %dx%d+%d+%d -quality %d', $src_w, $src_h, $src_x, $src_y, $this->quality ) );
+			$this->run_convert( sprintf( $this->image . ' -crop %dx%d+%d+%d -quality %d %s', $src_w, $src_h, $src_x, $src_y, $this->quality, escapeshellarg( $this->image ) ) );
 
 			if ( $dst_w || $dst_h ) {
 				// If destination width/height isn't specified, use same as
@@ -208,7 +214,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 				$dst_w = $dst_w ?: $src_w;
 				$dst_h = $dst_h ?: $src_h;
 
-				$this->run_convert( sprintf( $this->image . ' -scale %dx%d -quality %d', $dst_w, $dst_h, $this->quality ) );
+				$this->run_convert( sprintf( $this->image . ' -scale %dx%d -quality %d %s', $dst_w, $dst_h, $this->quality, escapeshellarg( $this->image ) ) );
 				return $this->update_size( $dst_w, $dst_h );
 			}
 		}

@@ -116,7 +116,7 @@ abstract class WP_Image_Editor {
 
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
 		// $suffix will be appended to the destination filename, just before the extension
-		$suffix = $this->get_suffix();
+		$suffix = $suffix ?: $this->get_suffix();
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
