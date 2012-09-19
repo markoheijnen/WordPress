@@ -171,4 +171,23 @@ abstract class WP_Image_Editor {
 
 		return $result;
 	}
+
+	protected function get_mime_type( $extension ) {
+		$mime_types = wp_get_mime_types();
+		$extensions = array_keys( $mime_types );
+
+		foreach( $extensions as $_extension ) {
+			if( preg_match("/{$extension}/i", $_extension ) ) {
+				return $mime_types[ $_extension ];
+			}
+		}
+
+		return false;
+	}
+
+	protected function get_extension( $mime_type ) {
+		$extensions = explode( '|' array_search( $mime_type, wp_get_mimetypes() ) );
+
+		return $extensions[0];
+	}
 }
