@@ -70,8 +70,8 @@ abstract class WP_Image_Editor {
 	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
 	abstract public function rotate( $angle );
 	abstract public function flip( $horz, $vert );
-	abstract public function save( $destfilename = null );
-	abstract public function stream();
+	abstract public function save( $destfilename = null, $mime_type = null );
+	abstract public function stream( $mime_type = null );
 
 	/**
 	 * Gets dimensions of image
@@ -114,13 +114,13 @@ abstract class WP_Image_Editor {
 		return ( (bool) $this->quality );
 	}
 
-	public function generate_filename( $suffix = null, $dest_path = null ) {
+	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
 		// $suffix will be appended to the destination filename, just before the extension
 		$suffix = $this->get_suffix();
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
-		$ext  = $info['extension'];
+		$ext  = $extension ?: $info['extension'];
 
 		// Convert any unrecognized formats to jpeg
 		if ( !in_array( strtolower( $ext ), array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {

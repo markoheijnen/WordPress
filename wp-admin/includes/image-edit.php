@@ -210,7 +210,7 @@ function wp_stream_image( $image, $mime_type, $post_id ) {
 	if ( $image instanceof WP_Image_Editor ) {
 		$image = apply_filters('image_editor_save_pre', $image, $post_id);
 
-		if ( is_wp_error( $image->stream() ) )
+		if ( is_wp_error( $image->stream( $mime_type ) ) )
 			return false;
 
 		return true;
