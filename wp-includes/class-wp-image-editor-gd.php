@@ -252,6 +252,12 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			$destfilename = $this->generate_filename();
 		}
 
+		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
+		if( ! in_array( $mime_type, $allowed_mime_types ) ) {
+			$mime_type = apply_filters( 'image_editor_default_mime_type', 'image/jpeg' );
+			$destfilename = basename( $destfilename ) . '.' . $this->get_extension( $mime_type );
+		}
+
 		if ( 'image/gif' == $mime_type ) {
 			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
@@ -264,9 +270,12 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			if ( ! $this->make_image( $destfilename, 'imagepng', array( $image, $destfilename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
-		else {
+		elseif ( 'image/jpeg' == $mime_type ) {
 			if ( ! $this->make_image( $destfilename, 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
+		}
+		else {
+			return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 
 		// Set correct file permissions
