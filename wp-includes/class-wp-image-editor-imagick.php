@@ -90,6 +90,12 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
 	}
 
+	protected function supports_mime_type( $mime_type ) {
+		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
+
+		return in_array( $mime_type, $allowed_mime_types );
+	}
+
 	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
 			return true;

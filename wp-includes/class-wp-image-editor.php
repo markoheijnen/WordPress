@@ -46,7 +46,7 @@ abstract class WP_Image_Editor {
 		static $implementation;
 
 		if ( null === $implementation ) {
-			$request_order = apply_filters( 'wp_editors', array( 'imagick', 'gd' ) );
+			$request_order = apply_filters( 'wp_editors', array( 'gd' ) ); // Temp disabled 'imagick'
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
 			foreach ( $request_order as $editor ) {
@@ -65,6 +65,7 @@ abstract class WP_Image_Editor {
 
 	abstract public static function test();
 	abstract protected function load();
+	abstract protected function supports_mime_type( $mime_type); // returns bool
 	abstract public function resize( $max_w, $max_h, $crop = false );
 	abstract public function multi_resize( $sizes );
 	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
@@ -112,6 +113,31 @@ abstract class WP_Image_Editor {
 		$this->quality = apply_filters( 'wp_editor_set_quality', $quality );
 
 		return ( (bool) $this->quality );
+	}
+
+	protected function get_output_format( $filename, $mime_type ) {
+		if( $mime_type && $filename ) {
+			$extension = $this->get_extension( $mime_type );
+		} 
+		else if ( $filename ) {
+			$extension = pathinfo( $filename, PATHINFO_EXTENSION );
+			$mime_type = $this->get_mime_type( $extension );
+		}
+		else {
+			// Whatever editor was chosen, it has the proper mime-type already.
+			$mime_type = $this->mime_type;
+			$extension = $this->get_extension( $mime_type );
+		}
+
+		if( $filename )
+			$filename = basename( $destfilename ) . '.' . $extension;
+
+		if( ! $this->supports_mime_type( $mime_type ) ) {
+			$mime_type = apply_filters( 'image_editor_default_mime_type', $this->default_mime_type );
+			$extension = $this->get_extension( $mime_type );
+		}
+
+		return array( 'filename' => $filename, 'extension' => $extension, 'mime_type' => $mime_type );
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {

@@ -59,6 +59,12 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		return parent::update_size( $width ? $width : imagesx( $this->image ), $height ? $height : imagesy( $this->image ) );
 	}
 
+	protected function supports_mime_type( $mime_type ) {
+		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
+
+		return in_array( $mime_type, $allowed_mime_types );
+	}
+
 	/**
 	 * Resizes Image.
 	 * Wrapper around _resize, since _resize returns a GD Resource
@@ -223,43 +229,28 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @param string $mime_type
 	 * @return array
 	 */
-	public function save( $destfilename = null, $mime_type = null ) {
-		$saved = $this->_save( $this->image, $destfilename, $mime_type );
+	public function save( $filename = null, $mime_type = null ) {
+		$saved = $this->_save( $this->image, $filename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $destfilename ? $destfilename : $this->file;
+			$this->file = $filename ? $filename : $this->file;
 			$this->mime_type = $mime_type ? $mime_type : $this->mime_type;
 		}
 
 		return $saved;
 	}
 
-	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		if( $mime_type ) {
-			if( $destfilename ) {
-				$destfilename = basename( $destfilename ) . '.' . $this->get_extension( $mime_type );
-			}
-			else {
-				$this->generate_filename( null, null, $this->get_extension( $mime_type ) );
-			}
-		}
-		else if ( $destfilename ) {
-			$ext = pathinfo( $destfilename, PATHINFO_EXTENSION );
-			$mime_type = $this->get_mime_type( $ext );
-		}
-		else {
-			$mime_type = $this->mime_type;
-			$destfilename = $this->generate_filename();
+	protected function _save( $image, $filename = null, $mime_type = null ) {
+		$file_info = $this->get_output_format( $filename, $mime_type );
+
+		if( ! $file_info['filename'] ) {
+			$file_info['filename'] = $this->generate_filename( null, null, $file_info['extension'] );
 		}
 
-		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
-		if( ! in_array( $mime_type, $allowed_mime_types ) ) {
-			$mime_type = apply_filters( 'image_editor_default_mime_type', 'image/jpeg' );
-			$destfilename = basename( $destfilename ) . '.' . $this->get_extension( $mime_type );
-		}
+		extract( $file_info );
 
 		if ( 'image/gif' == $mime_type ) {
-			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $filename, 'imagegif', array( $image, $filename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		elseif ( 'image/png' == $mime_type ) {
@@ -267,11 +258,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
-			if ( ! $this->make_image( $destfilename, 'imagepng', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $filename, 'imagepng', array( $image, $filename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		elseif ( 'image/jpeg' == $mime_type ) {
-			if ( ! $this->make_image( $destfilename, 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
+			if ( ! $this->make_image( $filename, 'imagejpeg', array( $image, $filename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		else {
@@ -279,13 +270,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		}
 
 		// Set correct file permissions
-		$stat = stat( dirname( $destfilename ) );
+		$stat = stat( dirname( $filename ) );
 		$perms = $stat['mode'] & 0000666; //same permissions as parent folder, strip off the executable bits
-		@ chmod( $destfilename, $perms );
+		@ chmod( $filename, $perms );
 
 		return array(
-			'path' => $destfilename,
-			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
+			'path' => $filename,
+			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
 			'width' => $this->size['width'],
 			'height' => $this->size['height']
 		);
