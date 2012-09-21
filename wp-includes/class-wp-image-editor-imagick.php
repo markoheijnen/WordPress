@@ -91,9 +91,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	protected function supports_mime_type( $mime_type ) {
-		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
+		$imagick_extension = strtoupper( $this->get_extension( $mime_type ) );
 
-		return in_array( $mime_type, $allowed_mime_types );
+		try {
+			return $this->image->queryFormats( $imagick_extension );
+		}
+		catch ( Exception $e ) {
+			return false;
+		}
 	}
 
 	public function resize( $max_w, $max_h, $crop = false ) {
@@ -258,8 +263,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return $saved;
 	}
 
-	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->mime_type;
+	protected function _save( $image, $filename = null, $mime_type = null ) {
+		$file_info = $this->get_output_format( $filename, $mime_type );
+
+		if( ! $file_info['filename'] ) {
+			$file_info['filename'] = $this->generate_filename( null, null, $file_info['extension'] );
+		}
+
+		extract( $file_info );
 
 		try {
 			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
@@ -278,23 +289,21 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 					$imagick_extension = 'JPG';
 			}
 
-			$destfilename = $destfilename ?: $this->generate_filename( null, null, $imagick_extension );
-
 			$this->image->setImageFormat( $imagick_extension );
-			$this->make_image( $destfilename, array( $image, 'writeImage' ), array( $destfilename ) );
+			$this->make_image( $filename, array( $image, 'writeImage' ), array( $filename ) );
 		}
 		catch ( Exception $e ) {
-			return new WP_Error( 'image_save_error', $e->getMessage(), $destfilename );
+			return new WP_Error( 'image_save_error', $e->getMessage(), $filename );
 		}
 
 		// Set correct file permissions
-		$stat = stat( dirname( $destfilename ) );
+		$stat = stat( dirname( $filename ) );
 		$perms = $stat['mode'] & 0000666; //same permissions as parent folder, strip off the executable bits
-		@ chmod( $destfilename, $perms );
+		@ chmod( $filename, $perms );
 
 		return array(
-			'path' => $destfilename,
-			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
+			'path' => $filename,
+			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
 			'width' => $this->size['width'],
 			'height' => $this->size['height']
 		);
