@@ -254,7 +254,7 @@ function wp_save_image_file( $filename, $image, $mime_type, $post_id ) {
 		if ( null !== $saved )
 			return $saved;
 
-		return $image->save( $filename );
+		return $image->save( $filename, $mime_type );
 	} else {
 		_deprecated_argument( __FUNCTION__, '3.5', __( '$image needs to be an WP_Image_Editor object' ) );
 
