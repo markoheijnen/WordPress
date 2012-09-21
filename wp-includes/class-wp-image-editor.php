@@ -122,11 +122,6 @@ abstract class WP_Image_Editor {
 		$dir  = $info['dirname'];
 		$ext  = $extension ?: $info['extension'];
 
-		// Convert any unrecognized formats to jpeg
-		if ( !in_array( strtolower( $ext ), array( 'png', 'jpg', 'jpeg', 'gif' ) ) ) {
-			$ext = 'jpg';
-		}
-
 		$name = wp_basename( $this->file, ".$ext" );
 		$ext = strtolower( $ext );
 
