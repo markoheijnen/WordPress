@@ -117,7 +117,7 @@ abstract class WP_Image_Editor {
 	}
 
 	protected function get_output_format( $filename, $mime_type ) {
-		if( $mime_type && $filename ) {
+		if ( $mime_type ) {
 			$extension = $this->get_extension( $mime_type );
 		} 
 		else if ( $filename ) {
