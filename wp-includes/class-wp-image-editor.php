@@ -131,7 +131,7 @@ abstract class WP_Image_Editor {
 		}
 
 		if( $filename )
-			$filename = basename( $destfilename ) . '.' . $extension;
+			$filename = basename( $filename ) . '.' . $extension;
 
 		if( ! $this->supports_mime_type( $mime_type ) ) {
 			$mime_type = apply_filters( 'image_editor_default_mime_type', $this->default_mime_type );
