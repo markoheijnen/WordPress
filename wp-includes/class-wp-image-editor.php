@@ -4,6 +4,7 @@ abstract class WP_Image_Editor {
 	protected $file = null;
 	protected $size = null;
 	protected $mime_type  = null;
+	protected $default_mime_type = 'image/jpeg';
 	protected $quality = 90;
 
 	protected function __construct( $filename ) {
