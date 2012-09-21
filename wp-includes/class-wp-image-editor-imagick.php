@@ -273,10 +273,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		extract( $file_info );
 
 		try {
-			if (! $this->image->queryFormats( $extension ) )
-				$extension = 'JPG';
-
-			$this->image->setImageFormat( $imagick_extension );
+			$this->image->setImageFormat( strtoupper( $extension ) );
 			$this->make_image( $filename, array( $image, 'writeImage' ), array( $filename ) );
 		}
 		catch ( Exception $e ) {
@@ -303,32 +300,12 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function stream( $mime_type = null ) {
-		if ( $mime_type ) {
-			$imagick_extension = strtoupper( $this->get_extension( $mime_type ) );
-		} else {
-			$mime_type = $this->mime_type;
-			$extension = null;
-
-			switch ( $mime_type ) {
-				case 'image/png':
-					$imagick_extension = 'PNG';
-					break;
-				case 'image/gif':
-					$imagick_extension = 'GIF';
-					break;
-				default:
-					$imagick_extension = 'JPG';
-			}
-		}
+		$file_info = $this->get_output_format( null, $mime_type );
+		extract ( $file_info );
 
 		try {
-			if ( ! ( $imagick_extension || $mime_type )  || ! $this->image->queryFormats( $imagick_extension ) ) {
-				$imagick_extension = 'JPG';
-				$mime_type = 'image/jpeg';
-			}
-
 			// Temporarily change format for stream
-			$this->image->setImageFormat( $imagick_extension );
+			$this->image->setImageFormat( strtoupper( $extension ) );
 
 			// Output stream of image content
 			header( "Content-Type: $mime_type" );
