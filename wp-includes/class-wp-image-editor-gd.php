@@ -50,7 +50,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return new WP_Error( 'invalid_image', __('Could not read image size.'), $this->file );
 
 		$this->update_size( $size[0], $size[1] );
-		$this->orig_type = $size['mime'];
+		$this->mime_type = $size['mime'];
 
 		return true;
 	}
@@ -228,7 +228,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 
 		if ( ! is_wp_error( $saved ) ) {
 			$this->file = $destfilename ? $destfilename : $this->file;
-			$this->orig_type = $mime_type ? $mime_type : $this->orig_type;
+			$this->mime_type = $mime_type ? $mime_type : $this->mime_type;
 		}
 
 		return $saved;
@@ -248,7 +248,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			$mime_type = $this->get_mime_type( $ext );
 		}
 		else {
-			$mime_type = $this->orig_type;
+			$mime_type = $this->mime_type;
 			$destfilename = $this->generate_filename();
 		}
 
@@ -297,9 +297,9 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @param string $mime_type
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ? $mime_type : $this->orig_type;
+		$mime_type = $mime_type ? $mime_type : $this->mime_type;
 
-		switch ( $this->orig_type ) {
+		switch ( $mime_type ) {
 			case 'image/png':
 				header( 'Content-Type: image/png' );
 				return imagepng( $this->image );

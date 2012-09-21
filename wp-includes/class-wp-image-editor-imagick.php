@@ -38,7 +38,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 			// Select the first frame to handle animated GIFs properly
 			$this->image->setIteratorIndex(0);
-			$this->orig_type = $this->image->getImageFormat();
+			$this->mime_type = $this->get_mime_type( $this->image->getImageFormat() );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
@@ -61,7 +61,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		$quality = $quality ?: $this->quality;
 
 		try {
-			if( 'JPEG' == $this->orig_type ) {
+			if( 'image/jpeg' == $this->mime_type ) {
 				$this->image->setImageCompressionQuality( apply_filters( 'jpeg_quality', $quality, 'image_resize' ) );
 				$this->image->setImageCompression( imagick::COMPRESSION_JPEG );
 			}
@@ -246,14 +246,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 		if ( ! is_wp_error( $saved ) ) {
 			$this->file = $destfilename ?: $this->file;
-			$this->orig_type = $mime_type ?: $this->orig_type;
+			$this->mime_type = $mime_type ?: $this->mime_type;
 		}
 
 		return $saved;
 	}
 
 	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ?: $this->orig_type;
+		$mime_type = $mime_type ?: $this->mime_type;
 
 		try {
 			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
@@ -301,29 +301,39 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function stream( $mime_type = null ) {
-		$extension = $this->orig_type;
 		if ( $mime_type ) {
-			$extension = strtoupper( $this->get_extension( $mime_type ) );
+			$imagick_extension = strtoupper( $this->get_extension( $mime_type ) );
 		} else {
-			$mime_type = $this->get_mime_type( $imagick_type );
+			$mime_type = $this->mime_type;
+			$extension = null;
+
+			switch ( $mime_type ) {
+				case 'image/png':
+					$imagick_extension = 'PNG';
+					break;
+				case 'image/gif':
+					$imagick_extension = 'GIF';
+					break;
+				default:
+					$imagick_extension = 'JPG';
+			}
 		}
 
 		try {
-			if ( !( $extension || $mime_type)  ||
-					! $this->image->queryFormats( $extension ) ) {
-				$extension = 'JPG';
+			if ( ! ( $imagick_extension || $mime_type )  || ! $this->image->queryFormats( $imagick_extension ) ) {
+				$imagick_extension = 'JPG';
 				$mime_type = 'image/jpeg';
 			}
 
 			// Temporarily change format for stream
-			$this->image->setImageFormat( $extension );
+			$this->image->setImageFormat( $imagick_extension );
 
 			// Output stream of image content
 			header( "Content-Type: $mime_type" );
 			print $this->image->getImageBlob();
 
 			// Reset Image to original Format
-			$this->image->setImageFormat( $this->orig_type );
+			$this->image->setImageFormat( $this->get_extension( $this->mime_type ) );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'image_stream_error', $e->getMessage() );

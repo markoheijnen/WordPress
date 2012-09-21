@@ -3,7 +3,7 @@
 abstract class WP_Image_Editor {
 	protected $file = null;
 	protected $size = null;
-	protected $orig_type  = null;
+	protected $mime_type  = null;
 	protected $quality = 90;
 
 	protected function __construct( $filename ) {
