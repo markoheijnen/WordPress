@@ -273,21 +273,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		extract( $file_info );
 
 		try {
-			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
-				$image->stripImage();
-			}
-
-			$imagick_extension = null;
-			switch ( $mime_type ) {
-				case 'image/png':
-					$imagick_extension = 'PNG';
-					break;
-				case 'image/gif':
-					$imagick_extension = 'GIF';
-					break;
-				default:
-					$imagick_extension = 'JPG';
-			}
+			if (! $this->image->queryFormats( $extension ) )
+				$extension = 'JPG';
 
 			$this->image->setImageFormat( $imagick_extension );
 			$this->make_image( $filename, array( $image, 'writeImage' ), array( $filename ) );
