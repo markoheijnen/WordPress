@@ -244,9 +244,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		$file_info = $this->get_output_format( $filename, $mime_type );
 
 		if( ! $file_info['filename'] ) {
-			$file_info['filename'] = $this->generate_filename( null, null, $file_info['extension'] );
+			$file_info['filename'] = $this->sanitize_extension(
+				$this->generate_filename( null, null, $file_info['extension'] ) );
 		}
 
+		// Overwrites $filename  with data from $file_info.
 		extract( $file_info );
 
 		if ( 'image/gif' == $mime_type ) {

@@ -116,29 +116,40 @@ abstract class WP_Image_Editor {
 		return ( (bool) $this->quality );
 	}
 
+	protected function sanitize_extension( $filename ) {
+		$info = pathinfo( $filename );
+		$dir  = $info['dirname'];
+		$ext  = $info['extension'];
+
+		// This defaults mime-types with various extensions (.jpg/.jpeg)
+		// to a default extension.
+		$mime_type = $this->get_mime_type( $ext );
+		$new_ext = $this->get_extension( $mime_type );
+
+		return ( $dir.DIRECTORY_SEPARATOR.wp_basename( $filename, ".$ext" ).".$new_ext" );
+	}
+
 	protected function get_output_format( $filename, $mime_type ) {
+		$new_ext = null;
+
 		if ( $mime_type ) {
-			$extension = $this->get_extension( $mime_type );
-		} 
+			$new_ext = $this->get_extension( $mime_type );
+		}
 		else if ( $filename ) {
-			$extension = pathinfo( $filename, PATHINFO_EXTENSION );
-			$mime_type = $this->get_mime_type( $extension );
+			$filename = $this->sanitize_extension( $filename );
 		}
 		else {
 			// Whatever editor was chosen, it has the proper mime-type already.
 			$mime_type = $this->mime_type;
-			$extension = $this->get_extension( $mime_type );
+			$new_ext = $this->get_extension( $mime_type );
 		}
 
-		if( $filename )
-			$filename = basename( $filename ) . '.' . $extension;
-
-		if( ! $this->supports_mime_type( $mime_type ) ) {
+		if ( ! $this->supports_mime_type( $mime_type ) ) {
 			$mime_type = apply_filters( 'image_editor_default_mime_type', $this->default_mime_type );
-			$extension = $this->get_extension( $mime_type );
+			$new_ext = $this->get_extension( $mime_type );
 		}
 
-		return array( 'filename' => $filename, 'extension' => $extension, 'mime_type' => $mime_type );
+		return array( 'filename' => $filename, 'extension' => $new_ext, 'mime_type' => $mime_type );
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
@@ -147,15 +158,15 @@ abstract class WP_Image_Editor {
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];
-		$ext  = $extension ?: $info['extension'];
+		$ext  = $info['extension'];
 
 		$name = wp_basename( $this->file, ".$ext" );
-		$ext = strtolower( $ext );
+		$new_ext = strtolower( $extension ? $extension : $ext );
 
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
 			$dir = $_dest_path;
 
-		return "{$dir}/{$name}-{$suffix}.{$ext}";
+		return $dir.DIRECTORY_SEPARATOR."{$name}-{$suffix}.{$new_ext}";
 	}
 
 	public function get_suffix() {
