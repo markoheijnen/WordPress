@@ -11,6 +11,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		}
 	}
 
+	/**
+	 * Checks to see if current environment supports Imagick
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @return boolean
+	 */
 	public static function test() {
 		if ( ! extension_loaded( 'imagick' ) )
 			return false;
@@ -19,9 +27,12 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Load image in $file into new Imagick Object
+	 * Load image in $this->file into new Imagick Object
 	 *
-	 * @return boolean|\WP_Error
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @return boolean|WP_Error True if loaded; WP_Error on failure.
 	 */
 	protected function load() {
 		if ( $this->image )
@@ -54,7 +65,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	/**
 	 * Sets Image Compression quality on a 1-100% scale.
 	 *
-	 * @param int $quality
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param int $quality Compression Quality. Range: [1,100]
 	 * @return boolean|WP_Error
 	 */
 	public function set_quality( $quality = null ) {

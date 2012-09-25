@@ -12,11 +12,12 @@ abstract class WP_Image_Editor {
 	}
 
 	/**
-	 * Returns a WP_Image_Editor instance and loads $path into it.
+	 * Returns a WP_Image_Editor instance and loads file into it.
 	 *
 	 * @since 3.5.0
+	 * @access public
 	 *
-	 * @param string $path
+	 * @param string $path Path to File to Load
 	 * @return WP_Image_Editor|WP_Error|boolean
 	 */
 	public final static function get_instance( $path ) {
@@ -64,9 +65,9 @@ abstract class WP_Image_Editor {
 		return $implementation;
 	}
 
-	abstract public static function test();
-	abstract protected function load();
 	abstract protected function supports_mime_type( $mime_type); // returns bool
+	abstract public static function test(); // returns bool
+	abstract protected function load(); // returns bool|WP_Error
 	abstract public function resize( $max_w, $max_h, $crop = false );
 	abstract public function multi_resize( $sizes );
 	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
@@ -79,8 +80,9 @@ abstract class WP_Image_Editor {
 	 * Gets dimensions of image
 	 *
 	 * @since 3.5.0
+	 * @access public
 	 *
-	 * @return array { 'width'=>int, 'height'=>int }
+	 * @return array {'width'=>int, 'height'=>int}
 	 */
 	public function get_size() {
 		return $this->size;
@@ -90,6 +92,7 @@ abstract class WP_Image_Editor {
 	 * Sets current image size
 	 *
 	 * @since 3.5.0
+	 * @access protected
 	 *
 	 * @param int $width
 	 * @param int $height
@@ -106,6 +109,7 @@ abstract class WP_Image_Editor {
 	 * Sets Image Compression quality on a 1-100% scale.
 	 *
 	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param int $quality 1-100
 	 * @return boolean
@@ -116,6 +120,21 @@ abstract class WP_Image_Editor {
 		return ( (bool) $this->quality );
 	}
 
+	/**
+	 * Returns preferred mime-type and extension based on provided
+	 * file's extension and mime, or current file's extension and mime.
+	 *
+	 * Will default to $this->default_mime_type if requested is not supported.
+	 *
+	 * Provides corrected filename only if filename is provided.
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param string $filename
+	 * @param type $mime_type
+	 * @return array { filename|null, extension, mime-type }
+	 */
 	protected function get_output_format( $filename = null, $mime_type = null ) {
 		$new_ext = $file_ext = null;
 		$file_mime = null;
@@ -160,6 +179,17 @@ abstract class WP_Image_Editor {
 		return array( $filename, $new_ext, $mime_type );
 	}
 
+	/**
+	 * Builds an output filename based on current file, and adding proper suffix
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $suffix
+	 * @param string $dest_path
+	 * @param string $extension
+	 * @return string filename
+	 */
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
 		// $suffix will be appended to the destination filename, just before the extension
 		if ( ! $suffix )
@@ -178,6 +208,14 @@ abstract class WP_Image_Editor {
 		return $dir.DIRECTORY_SEPARATOR."{$name}-{$suffix}.{$new_ext}";
 	}
 
+	/**
+	 * Builds and returns proper suffix for file based on height and width.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @return string suffix
+	 */
 	public function get_suffix() {
 		if ( ! $this->get_size() )
 			return false;
@@ -185,6 +223,17 @@ abstract class WP_Image_Editor {
 		return "{$this->size['width']}x{$this->size['height']}";
 	}
 
+	/**
+	 * Either calls editor's save function or handles file as a stream.
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param string|stream $filename
+	 * @param callable $function
+	 * @param array $arguments
+	 * @return boolean
+	 */
 	protected function make_image( $filename, $function, $arguments ) {
 		$dst_file = $filename;
 
@@ -214,6 +263,16 @@ abstract class WP_Image_Editor {
 		return $result;
 	}
 
+	/**
+	 * Returns first matched mime-type from extension,
+	 * as mapped from wp_get_mime_types()
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param string $extension
+	 * @return string|boolean
+	 */
 	static protected function get_mime_type( $extension ) {
 		$mime_types = wp_get_mime_types();
 		$extensions = array_keys( $mime_types );
@@ -227,6 +286,16 @@ abstract class WP_Image_Editor {
 		return false;
 	}
 
+	/**
+	 * Returns first matched extension from Mime-type,
+	 * as mapped from wp_get_mime_types()
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param string $mime_type
+	 * @return string|boolean
+	 */
 	static protected function get_extension( $mime_type ) {
 		$extensions = explode( '|', array_search( $mime_type, wp_get_mime_types() ) );
 
