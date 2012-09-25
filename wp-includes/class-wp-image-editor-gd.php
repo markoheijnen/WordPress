@@ -14,6 +14,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Checks to see if GD is available.
 	 *
 	 * @since 3.5
+	 * @access protected
 	 *
 	 * @return boolean
 	 */
@@ -28,6 +29,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Loads image from $this->file into GD Resource
 	 *
 	 * @since 3.5
+	 * @access protected
 	 *
 	 * @return boolean|\WP_Error
 	 */
