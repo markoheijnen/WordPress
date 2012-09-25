@@ -6,6 +6,7 @@ abstract class WP_Image_Editor {
 	protected $mime_type  = null;
 	protected $default_mime_type = 'image/jpeg';
 	protected $quality = 90;
+	private static $implementation;
 
 	protected function __construct( $filename ) {
 		$this->file = $filename;
@@ -45,9 +46,8 @@ abstract class WP_Image_Editor {
 	 * @return string|bool Class name for the first editor that claims to support the request. False if no editor claims to support the request.
 	 */
 	private final static function choose_implementation() {
-		static $implementation;
 
-		if ( null === $implementation ) {
+		if ( null === self::$implementation ) {
 			$request_order = apply_filters( 'wp_editors', array( 'imagick', 'gd' ) );
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
@@ -58,11 +58,11 @@ abstract class WP_Image_Editor {
 				if ( ! call_user_func( array( $class, 'test' ) ) )
 					continue;
 
-				$implementation = $class;
+				self::$implementation = $class;
 				break;
 			}
 		}
-		return $implementation;
+		return self::$implementation;
 	}
 
 	abstract public static function test(); // returns bool
