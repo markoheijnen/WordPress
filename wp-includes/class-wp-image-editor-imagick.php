@@ -104,7 +104,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
 	}
 
-	protected function supports_mime_type( $mime_type ) {
+	public function supports_mime_type( $mime_type ) {
 		$imagick_extension = strtoupper( $this->get_extension( $mime_type ) );
 
 		try {

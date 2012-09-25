@@ -59,7 +59,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		return parent::update_size( $width ? $width : imagesx( $this->image ), $height ? $height : imagesy( $this->image ) );
 	}
 
-	protected function supports_mime_type( $mime_type ) {
+	public function supports_mime_type( $mime_type ) {
 		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
 
 		return in_array( $mime_type, $allowed_mime_types );
