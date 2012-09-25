@@ -72,7 +72,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function set_quality( $quality = null ) {
-		$quality = $quality ?: $this->quality;
+		if ( !$quality )
+			$quality = $this->quality;
 
 		try {
 			if( 'image/jpeg' == $this->mime_type ) {
@@ -209,8 +210,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			if ( $dst_w || $dst_h ) {
 				// If destination width/height isn't specified, use same as
 				// width/height from source.
-				$dst_w = $dst_w ?: $src_w;
-				$dst_h = $dst_h ?: $src_h;
+				if ( ! $dst_w )
+					$dst_w = $src_w;
+				if ( ! $dst_h )
+					$dst_h = $src_h;
 
 				$this->image->scaleImage( $dst_w, $dst_h );
 				return $this->update_size( $dst_w, $dst_h );

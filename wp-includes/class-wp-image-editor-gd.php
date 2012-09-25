@@ -159,8 +159,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
 		// If destination width/height isn't specified, use same as
 		// width/height from source.
-		$dst_w = $dst_w ? $dst_w : $src_w;
-		$dst_h = $dst_h ? $dst_h : $src_h;
+		if ( ! $dst_w )
+			$dst_w = $src_w;
+		if ( ! $dst_h )
+			$dst_h = $src_h;
+
 		$dst = wp_imagecreatetruecolor( $dst_w, $dst_h );
 
 		if ( $src_abs ) {
