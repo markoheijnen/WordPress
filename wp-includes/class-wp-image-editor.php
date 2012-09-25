@@ -274,6 +274,9 @@ abstract class WP_Image_Editor {
 	 * @return string|boolean
 	 */
 	protected static function get_mime_type( $extension = null ) {
+		if ( ! $extension )
+			return false;
+
 		$mime_types = wp_get_mime_types();
 		$extensions = array_keys( $mime_types );
 
@@ -298,6 +301,9 @@ abstract class WP_Image_Editor {
 	 */
 	protected static function get_extension( $mime_type = null ) {
 		$extensions = explode( '|', array_search( $mime_type, wp_get_mime_types() ) );
+
+		if ( empty( $extensions[0] ) )
+			return false;
 
 		return $extensions[0];
 	}

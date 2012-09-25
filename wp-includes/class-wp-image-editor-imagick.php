@@ -130,10 +130,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public static function supports_mime_type( $mime_type = null ) {
+		if ( ! $mime_type )
+			return false;
+
 		$imagick_extension = strtoupper( self::get_extension( $mime_type ) );
 
 		try {
-			return $this->image->queryFormats( $imagick_extension );
+			return ( (bool) Imagick::queryFormats( $imagick_extension ) );
 		}
 		catch ( Exception $e ) {
 			return false;
@@ -333,7 +336,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			// Store initial Format
 			$orig_format = $this->image->getImageFormat();
 
-			$this->image->setImageFormat( strtoupper( $extension ) );
+			$this->image->setImageFormat( strtoupper( $this->get_extension( $mime_type ) ) );
 			$this->make_image( $filename, array( $image, 'writeImage' ), array( $filename ) );
 
 			// Reset original Format
