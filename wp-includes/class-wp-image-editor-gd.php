@@ -57,6 +57,15 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		return true;
 	}
 
+	/**
+	 * Sets or updates current image size
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param int $width
+	 * @param int $height
+	 */
 	protected function update_size( $width = false, $height = false ) {
 		if ( ! $width )
 			$width = imagesx( $this->image );
@@ -68,19 +77,28 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	public function supports_mime_type( $mime_type ) {
+	/**
+	 * Checks to see if editor supports mime-type specified
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type
+	 * @return boolean
+	 */
 		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
 
 		return in_array( $mime_type, $allowed_mime_types );
 	}
 
 	/**
-	 * Resizes Image.
+	 * Resizes current image.
 	 * Wrapper around _resize, since _resize returns a GD Resource
 	 *
 	 * @param int $max_w
 	 * @param int $max_h
 	 * @param boolean $crop
-	 * @return boolean
+	 * @return boolean|WP_Error
 	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
@@ -187,11 +205,14 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	/**
-	 * Rotates in memory image by $angle.
+	 * Rotates current image counter-clockwise by $angle.
 	 * Ported from image-edit.php
 	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
 	 * @param float $angle
-	 * @return boolean
+	 * @return boolean|WP_Error
 	 */
 	public function rotate( $angle ) {
 		if ( function_exists('imagerotate') ) {
@@ -210,8 +231,9 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	/**
 	 * Flips current image
 	 *
-	 * @param boolean $horz
-	 * @param boolean $vert
+	 * @param boolean $horz Horizonal Flip
+	 * @param boolean $vert Vertical Flip
+	 * @returns boolean|WP_Error
 	 */
 	public function flip( $horz, $vert ) {
 		$w = $this->size['width'];
@@ -238,7 +260,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @param string $destfilename
 	 * @param string $mime_type
-	 * @return array
+	 * @return array|WP_Error {'path'=>string, 'file'=>string, 'width'=>int, 'height'=>int, 'mime-type'=>string}
 	 */
 	public function save( $filename = null, $mime_type = null ) {
 		$saved = $this->_save( $this->image, $filename, $mime_type );
@@ -293,7 +315,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 
 	/**
 	 * Returns stream of current image
-	 * 
+	 *
 	 * @param string $mime_type
 	 */
 	public function stream( $mime_type = null ) {

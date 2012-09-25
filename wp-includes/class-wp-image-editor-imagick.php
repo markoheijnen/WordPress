@@ -91,6 +91,15 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		return parent::set_quality( $quality );
 	}
 
+	/**
+	 * Sets or updates current image size
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param int $width
+	 * @param int $height
+	 */
 	protected function update_size( $width = null, $height = null ) {
 		$size = null;
 		if ( !$width || !$height ) {
@@ -113,6 +122,15 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 	public function supports_mime_type( $mime_type ) {
 		$imagick_extension = strtoupper( $this->get_extension( $mime_type ) );
+	/**
+	 * Checks to see if editor supports mime-type specified
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type
+	 * @return boolean
+	 */
 
 		try {
 			return $this->image->queryFormats( $imagick_extension );
@@ -122,6 +140,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		}
 	}
 
+	/**
+	 * Resizes current image.
+	 *
+	 * @param int $max_w
+	 * @param int $max_h
+	 * @param boolean $crop
+	 * @return boolean|WP_Error
+	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
 			return true;
@@ -226,12 +252,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Rotates image by $angle.
+	 * Rotates current image counter-clockwise by $angle.
 	 *
 	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param float $angle
-	 * @return boolean
+	 * @return boolean|WP_Error
 	 */
 	public function rotate( $angle ) {
 		/**
@@ -248,10 +275,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Flips Image
+	 * Flips current image
 	 *
-	 * @param boolean $horz
-	 * @param boolean $vert
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param boolean $horz Horizontal Flip
+	 * @param boolean $vert Vertical Flip
 	 * @returns boolean
 	 */
 	public function flip( $horz, $vert ) {
@@ -273,7 +303,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 *
 	 * @param string $destfilename
 	 * @param string $mime_type
-	 * @return array
+	 * @return array|WP_Error {'path'=>string, 'file'=>string, 'width'=>int, 'height'=>int, 'mime-type'=>string}
 	 */
 	public function save( $destfilename = null, $mime_type = null ) {
 		$saved = $this->_save( $this->image, $destfilename, $mime_type );

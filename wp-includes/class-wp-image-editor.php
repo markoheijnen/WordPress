@@ -111,7 +111,7 @@ abstract class WP_Image_Editor {
 	 * @since 3.5.0
 	 * @access public
 	 *
-	 * @param int $quality 1-100
+	 * @param int $quality Compression Quality. Range: [1,100]
 	 * @return boolean
 	 */
 	public function set_quality( $quality ) {
@@ -157,8 +157,8 @@ abstract class WP_Image_Editor {
 		// Check to see if specified mime-type is the same as type implied by
 		// file extension.  If so, prefer extension from file.
 		if ( ! $mime_type || ( $file_mime == $mime_type ) ) {
-				$mime_type = $file_mime;
-				$new_ext = $file_ext;
+			$mime_type = $file_mime;
+			$new_ext = $file_ext;
 		}
 
 		// Double-check that the mime-type selected is supported by the editor.
