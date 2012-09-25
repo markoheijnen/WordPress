@@ -56,7 +56,13 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	protected function update_size( $width = false, $height = false ) {
-		return parent::update_size( $width ? $width : imagesx( $this->image ), $height ? $height : imagesy( $this->image ) );
+		if ( ! $width )
+			$width = imagesx( $this->image );
+
+		if ( ! $height )
+			$height = imagesy( $this->image );
+
+		return parent::update_size( $width, $height );
 	}
 
 	public function supports_mime_type( $mime_type ) {

@@ -101,7 +101,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			}
 		}
 
-		return parent::update_size( $width ?: $size['width'], $height ?: $size['height'] );
+		if ( ! $width )
+			$width = $size['width'];
+
+		if ( ! $height )
+			$height = $size['height'];
+
+		return parent::update_size( $width, $height );
 	}
 
 	public function supports_mime_type( $mime_type ) {
