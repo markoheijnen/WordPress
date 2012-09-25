@@ -3727,3 +3727,14 @@ function wp_is_stream( $path ) {
 
 	return preg_match( "!^$wrappers_re://!", $path ) === 1;
 }
+
+/**
+ * Test if the supplied date is valid for the Gregorian calendar
+ *
+ * @since 3.5.0
+ *
+ * @return bool true|false
+ */
+function wp_checkdate( $month, $day, $year, $source_date ) {
+	return apply_filters( 'wp_checkdate', checkdate( $month, $day, $year ), $source_date );
+}

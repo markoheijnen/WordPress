@@ -108,10 +108,8 @@ if ( ! validate_current_theme() || isset( $_GET['broken'] ) ) : ?>
 <div id="message1" class="updated"><p><?php _e('The active theme is broken. Reverting to the default theme.'); ?></p></div>
 <?php elseif ( isset($_GET['activated']) ) :
 		if ( isset( $_GET['previewed'] ) ) { ?>
-		<div id="message2" class="updated"><p><?php printf( __( 'Settings saved and theme activated. <a href="%s">Visit site</a>.' ), home_url( '/' ) ); ?></p></div>
-		<?php } elseif ( isset($wp_registered_sidebars) && count( (array) $wp_registered_sidebars ) && current_user_can('edit_theme_options') ) { ?>
-<div id="message2" class="updated"><p><?php printf( __('New theme activated. This theme supports widgets, please visit the <a href="%s">widgets settings</a> screen to configure them.'), admin_url( 'widgets.php' ) ); ?></p></div><?php
-		} else { ?>
+		<div id="message2" class="updated"><p><?php printf( __( 'Settings saved and theme activated. <a href="%s">Visit site</a>' ), home_url( '/' ) ); ?></p></div>
+		<?php } else { ?>
 <div id="message2" class="updated"><p><?php printf( __( 'New theme activated. <a href="%s">Visit site</a>' ), home_url( '/' ) ); ?></p></div><?php
 		}
 	elseif ( isset($_GET['deleted']) ) : ?>
@@ -174,7 +172,10 @@ $customize_title = sprintf( __( 'Customize &#8220;%s&#8221;' ), $ct->display('Na
 				else
 					$options[] = "<a href='{$submenu[$item[2]][0][2]}'$class>{$item[0]}</a>";
 			} else if ( current_user_can($item[1]) ) {
-				if ( file_exists(ABSPATH . 'wp-admin/' . $item[2]) ) {
+				$menu_file = $item[2];
+				if ( false !== ( $pos = strpos( $menu_file, '?' ) ) )
+					$menu_file = substr( $menu_file, 0, $pos );
+				if ( file_exists( ABSPATH . "wp-admin/$menu_file" ) ) {
 					$options[] = "<a href='{$item[2]}'$class>{$item[0]}</a>";
 				} else {
 					$options[] = "<a href='themes.php?page={$item[2]}'$class>{$item[0]}</a>";
@@ -198,9 +199,11 @@ $customize_title = sprintf( __( 'Customize &#8220;%s&#8221;' ), $ct->display('Na
 				<li><?php echo $option; ?></li>
 			<?php endforeach; ?>
 		</ul>
+		<?php
+		endif; // options
+		?>
 	</div>
 	<?php
-		endif; // options
 	endif; // options || edit_theme_options
 	?>
 

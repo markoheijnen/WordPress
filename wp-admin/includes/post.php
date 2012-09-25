@@ -123,6 +123,10 @@ function _wp_translate_postdata( $update = false, $post_data = null ) {
 		$mn = ($mn > 59 ) ? $mn -60 : $mn;
 		$ss = ($ss > 59 ) ? $ss -60 : $ss;
 		$post_data['post_date'] = sprintf( "%04d-%02d-%02d %02d:%02d:%02d", $aa, $mm, $jj, $hh, $mn, $ss );
+		$valid_date = wp_checkdate( $mm, $jj, $aa, $post_data['post_date'] );
+		if ( !$valid_date ) {
+			return new WP_Error( 'invalid_date', __( 'Whoops, the provided date is invalid.' ) );
+		}
 		$post_data['post_date_gmt'] = get_gmt_from_date( $post_data['post_date'] );
 	}
 
@@ -156,16 +160,6 @@ function edit_post( $post_data = null ) {
 			wp_die( __('You are not allowed to edit this page.' ));
 		else
 			wp_die( __('You are not allowed to edit this post.' ));
-	}
-
-	// Autosave shouldn't save too soon after a real save
-	if ( 'autosave' == $post_data['action'] ) {
-		$post = get_post( $post_ID );
-		$now = time();
-		$then = strtotime($post->post_date_gmt . ' +0000');
-		$delta = AUTOSAVE_INTERVAL / 2;
-		if ( ($now - $then) < $delta )
-			return $post_ID;
 	}
 
 	$post_data = _wp_translate_postdata( true, $post_data );
@@ -228,6 +222,16 @@ function edit_post( $post_data = null ) {
 			if ( is_protected_meta( $meta->meta_key, 'post' ) || ! current_user_can( 'delete_post_meta', $post_ID, $meta->meta_key ) )
 				continue;
 			delete_meta( $key );
+		}
+	}
+
+	// Attachment stuff
+	if ( 'attachment' == $post_data['post_type'] && isset( $post_data['_wp_attachment_image_alt'] ) ) {
+		$image_alt = get_post_meta( $post_ID, '_wp_attachment_image_alt', true );
+		if ( $image_alt != stripslashes( $post_data['_wp_attachment_image_alt'] ) ) {
+			$image_alt = wp_strip_all_tags( stripslashes( $post_data['_wp_attachment_image_alt'] ), true );
+			// update_meta expects slashed
+			update_post_meta( $post_ID, '_wp_attachment_image_alt', addslashes( $image_alt ) );
 		}
 	}
 
@@ -1060,7 +1064,7 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 
 	list($permalink, $post_name) = get_sample_permalink($post->ID, $new_title, $new_slug);
 
-	if ( 'publish' == $post->post_status ) {
+	if ( 'publish' == get_post_status( $post ) ) {
 		$ptype = get_post_type_object($post->post_type);
 		$view_post = $ptype->labels->view_item;
 		$title = __('Click to edit this part of the permalink');
@@ -1071,9 +1075,9 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 	if ( false === strpos($permalink, '%postname%') && false === strpos($permalink, '%pagename%') ) {
 		$return = '<strong>' . __('Permalink:') . "</strong>\n" . '<span id="sample-permalink" tabindex="-1">' . $permalink . "</span>\n";
 		if ( '' == get_option( 'permalink_structure' ) && current_user_can( 'manage_options' ) && !( 'page' == get_option('show_on_front') && $id == get_option('page_on_front') ) )
-			$return .= '<span id="change-permalinks"><a href="options-permalink.php" class="button button-tiny" target="_blank">' . __('Change Permalinks') . "</a></span>\n";
+			$return .= '<span id="change-permalinks"><a href="options-permalink.php" class="button button-small" target="_blank">' . __('Change Permalinks') . "</a></span>\n";
 		if ( isset($view_post) )
-			$return .= "<span id='view-post-btn'><a href='$permalink' class='button button-tiny'>$view_post</a></span>\n";
+			$return .= "<span id='view-post-btn'><a href='$permalink' class='button button-small'>$view_post</a></span>\n";
 
 		$return = apply_filters('get_sample_permalink_html', $return, $id, $new_title, $new_slug);
 
@@ -1100,10 +1104,10 @@ function get_sample_permalink_html( $id, $new_title = null, $new_slug = null ) {
 	$return =  '<strong>' . __('Permalink:') . "</strong>\n";
 	$return .= '<span id="sample-permalink" tabindex="-1">' . $display_link . "</span>\n";
 	$return .= '&lrm;'; // Fix bi-directional text display defect in RTL languages.
-	$return .= '<span id="edit-slug-buttons"><a href="#post_name" class="edit-slug button button-tiny hide-if-no-js" onclick="editPermalink(' . $id . '); return false;">' . __('Edit') . "</a></span>\n";
+	$return .= '<span id="edit-slug-buttons"><a href="#post_name" class="edit-slug button button-small hide-if-no-js" onclick="editPermalink(' . $id . '); return false;">' . __('Edit') . "</a></span>\n";
 	$return .= '<span id="editable-post-name-full">' . $post_name . "</span>\n";
 	if ( isset($view_post) )
-		$return .= "<span id='view-post-btn'><a href='$view_link' class='button button-tiny'>$view_post</a></span>\n";
+		$return .= "<span id='view-post-btn'><a href='$view_link' class='button button-small'>$view_post</a></span>\n";
 
 	$return = apply_filters('get_sample_permalink_html', $return, $id, $new_title, $new_slug);
 

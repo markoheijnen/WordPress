@@ -355,11 +355,11 @@ function wp_comment_reply($position = '1', $checkbox = false, $mode = 'single', 
 	</div>
 
 	<p id="replysubmit" class="submit">
-	<a href="#comments-form" class="cancel button-secondary alignleft"><?php _e('Cancel'); ?></a>
 	<a href="#comments-form" class="save button-primary alignright">
 	<span id="addbtn" style="display:none;"><?php _e('Add Comment'); ?></span>
 	<span id="savebtn" style="display:none;"><?php _e('Update Comment'); ?></span>
 	<span id="replybtn" style="display:none;"><?php _e('Submit Reply'); ?></span></a>
+	<a href="#comments-form" class="cancel button-secondary alignleft"><?php _e('Cancel'); ?></a>
 	<img class="waiting" style="display:none;" src="<?php echo esc_url( admin_url( 'images/wpspin_light.gif' ) ); ?>" alt="" />
 	<span class="error" style="display:none;"></span>
 	<br class="clear" />
@@ -492,9 +492,9 @@ function _list_meta_row( $entry, &$count ) {
 	$r .= "\n\t\t<td class='left'><label class='screen-reader-text' for='meta[{$entry['meta_id']}][key]'>" . __( 'Key' ) . "</label><input name='meta[{$entry['meta_id']}][key]' id='meta[{$entry['meta_id']}][key]' type='text' size='20' value='{$entry['meta_key']}' />";
 
 	$r .= "\n\t\t<div class='submit'>";
-	$r .= get_submit_button( __( 'Delete' ), "delete:the-list:meta-{$entry['meta_id']}::_ajax_nonce=$delete_nonce deletemeta", "deletemeta[{$entry['meta_id']}]", false );
+	$r .= get_submit_button( __( 'Delete' ), "delete:the-list:meta-{$entry['meta_id']}::_ajax_nonce=$delete_nonce deletemeta small", "deletemeta[{$entry['meta_id']}]", false );
 	$r .= "\n\t\t";
-	$r .= get_submit_button( __( 'Update' ), "add:the-list:meta-{$entry['meta_id']}::_ajax_nonce-add-meta=$update_nonce updatemeta" , "meta-{$entry['meta_id']}-submit", false );
+	$r .= get_submit_button( __( 'Update' ), "add:the-list:meta-{$entry['meta_id']}::_ajax_nonce-add-meta=$update_nonce updatemeta small" , "meta-{$entry['meta_id']}-submit", false );
 	$r .= "</div>";
 	$r .= wp_nonce_field( 'change-meta', '_ajax_nonce', false, false );
 	$r .= "</td>";
@@ -554,8 +554,10 @@ function meta_form() {
 <td><textarea id="metavalue" name="metavalue" rows="2" cols="25"></textarea></td>
 </tr>
 
-<tr><td colspan="2" class="submit">
+<tr><td colspan="2">
+<div class="submit">
 <?php submit_button( __( 'Add Custom Field' ), 'add:the-list:newmeta secondary', 'addmeta', false, array( 'id' => 'newmeta-submit' ) ); ?>
+</div>
 <?php wp_nonce_field( 'add-meta', '_ajax_nonce-add-meta', false ); ?>
 </td></tr>
 </tbody>
@@ -1651,7 +1653,7 @@ function get_submit_button( $text = null, $type = 'primary', $name = 'submit', $
 	if ( ! is_array( $type ) )
 		$type = explode( ' ', $type ); 
 
-	$button_shorthand = array( 'primary', 'tiny', 'small', 'large' );
+	$button_shorthand = array( 'primary', 'small', 'large' );
 	$classes = array( 'button' );
 	foreach ( $type as $t ) {
 		if ( 'secondary' === $t || 'button-secondary' === $t )

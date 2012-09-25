@@ -147,6 +147,7 @@ function get_template_part( $slug, $name = null ) {
  *
  * @since 2.7.0
  * @param boolean $echo Default to echo and not return the form.
+ * @return string|null String when retrieving, null when displaying or if searchform.php exists.
  */
 function get_search_form($echo = true) {
 	do_action( 'get_search_form' );
@@ -181,6 +182,7 @@ function get_search_form($echo = true) {
  *
  * @param string $redirect Optional path to redirect to on login/logout.
  * @param boolean $echo Default to echo and not return the link.
+ * @return string|null String when retrieving, null when displaying.
  */
 function wp_loginout($redirect = '', $echo = true) {
 	if ( ! is_user_logged_in() )
@@ -205,6 +207,7 @@ function wp_loginout($redirect = '', $echo = true) {
  * @uses apply_filters() calls 'logout_url' hook on final logout url
  *
  * @param string $redirect Path to redirect to on logout.
+ * @return string A log out URL.
  */
 function wp_logout_url($redirect = '') {
 	$args = array( 'action' => 'logout' );
@@ -229,7 +232,7 @@ function wp_logout_url($redirect = '') {
  *
  * @param string $redirect Path to redirect to on login.
  * @param bool $force_reauth Whether to force reauthorization, even if a cookie is present. Default is false.
- * @return string A log in url
+ * @return string A log in URL.
  */
 function wp_login_url($redirect = '', $force_reauth = false) {
 	$login_url = site_url('wp-login.php', 'login');
@@ -248,8 +251,8 @@ function wp_login_url($redirect = '', $force_reauth = false) {
  * the HTML immediately. Pass array('echo'=>false) to return the string instead.
  *
  * @since 3.0.0
- * @param array $args Configuration options to modify the form output
- * @return Void, or string containing the form
+ * @param array $args Configuration options to modify the form output.
+ * @return string|null String when retrieving, null when displaying.
  */
 function wp_login_form( $args = array() ) {
 	$defaults = array( 'echo' => true,
@@ -305,6 +308,7 @@ function wp_login_form( $args = array() ) {
  * @uses apply_filters() calls 'lostpassword_url' hook on the lostpassword url
  *
  * @param string $redirect Path to redirect to on login.
+ * @return string Lost password URL.
  */
 function wp_lostpassword_url( $redirect = '' ) {
 	$args = array( 'action' => 'lostpassword' );
@@ -328,6 +332,7 @@ function wp_lostpassword_url( $redirect = '' ) {
  * @param string $before Text to output before the link (defaults to <li>).
  * @param string $after Text to output after the link (defaults to </li>).
  * @param boolean $echo Default to echo and not return the link.
+ * @return string|null String when retrieving, null when displaying.
  */
 function wp_register( $before = '<li>', $after = '</li>', $echo = true ) {
 
@@ -861,6 +866,7 @@ function get_archives_link($url, $text, $format = 'html', $before = '', $after =
  * @since 1.2.0
  *
  * @param string|array $args Optional. Override defaults.
+ * @return string|null String when retrieving, null when displaying.
  */
 function wp_get_archives($args = '') {
 	global $wpdb, $wp_locale;
@@ -1062,6 +1068,7 @@ function calendar_week_mod($num) {
  *
  * @param bool $initial Optional, default is true. Use initial calendar names.
  * @param bool $echo Optional, default is true. Set to false for return.
+ * @return string|null String when retrieving, null when displaying.
  */
 function get_calendar($initial = true, $echo = true) {
 	global $wpdb, $m, $monthnum, $year, $wp_locale, $posts;
@@ -1624,6 +1631,8 @@ function feed_links_extra( $args = array() ) {
 		'authortitle' => __('%1$s %2$s Posts by %3$s Feed'),
 		/* translators: 1: blog name, 2: separator(raquo), 3: search phrase */
 		'searchtitle' => __('%1$s %2$s Search Results for &#8220;%3$s&#8221; Feed'),
+		/* translators: 1: blog name, 2: separator(raquo), 3: post type name */ 
+		'posttypetitle' => __('%1$s %2$s %3$s Feed'), 		
 	);
 
 	$args = wp_parse_args( $args, $defaults );
@@ -1654,7 +1663,10 @@ function feed_links_extra( $args = array() ) {
 	} elseif ( is_search() ) {
 		$title = sprintf( $args['searchtitle'], get_bloginfo('name'), $args['separator'], get_search_query( false ) );
 		$href = get_search_feed_link();
-	}
+	} elseif ( is_post_type_archive() ) { 
+		$title = sprintf( $args['posttypetitle'], get_bloginfo('name'), $args['separator'], post_type_archive_title( '', false ) ); 
+		$href = get_post_type_archive_feed_link( get_post_type() ); 
+	} 
 
 	if ( isset($title) && isset($href) )
 		echo '<link rel="alternate" type="' . feed_content_type() . '" title="' . esc_attr( $title ) . '" href="' . esc_url( $href ) . '" />' . "\n";
@@ -1846,8 +1858,8 @@ function language_attributes($doctype = 'html') {
 	$attributes = array();
 	$output = '';
 
-	if ( function_exists( 'is_rtl' ) )
-		$attributes[] = 'dir="' . ( is_rtl() ? 'rtl' : 'ltr' ) . '"';
+	if ( function_exists( 'is_rtl' ) && is_rtl() )
+		$attributes[] = 'dir="rtl"';
 
 	if ( $lang = get_bloginfo('language') ) {
 		if ( get_option('html_type') == 'text/html' || $doctype == 'html' )
@@ -2255,8 +2267,8 @@ function disabled( $disabled, $current = true, $echo = true ) {
  * @since 2.8.0
  * @access private
  *
- * @param any $helper One of the values to compare
- * @param any $current (true) The other value to compare if not just true
+ * @param mixed $helper One of the values to compare
+ * @param mixed $current (true) The other value to compare if not just true
  * @param bool $echo Whether to echo or just return the string
  * @param string $type The type of checked|selected|disabled we are doing
  * @return string html attribute or empty string

@@ -52,13 +52,16 @@ function create_initial_post_types() {
 
 	register_post_type( 'attachment', array(
 		'labels' => array(
-			'name' => __( 'Media' ),
-			'edit_item' => __( 'Edit Media' ),
+			'name' => _x('Media', 'post type general name'),
+			'name_admin_bar' => _x( 'Media', 'add new from admin bar' ),
+			'add_new' => _x( 'Add New', 'add new media' ),
+ 			'edit_item' => __( 'Edit Media' ),
+ 			'view_item' => __( 'View Attachment Page' ),
 		),
 		'public' => true,
-		'show_ui' => false,
+		'show_ui' => true,
 		'_builtin' => true, /* internal use only. don't use this when registering your own post type. */
-		'_edit_link' => 'media.php?attachment_id=%d', /* internal use only. don't use this when registering your own post type. */
+		'_edit_link' => 'post.php?post=%d', /* internal use only. don't use this when registering your own post type. */
 		'capability_type' => 'post',
 		'map_meta_cap' => true,
 		'hierarchical' => false,
@@ -66,7 +69,7 @@ function create_initial_post_types() {
 		'query_var' => false,
 		'show_in_nav_menus' => false,
 		'delete_with_user' => true,
-		'supports' => array( 'comments', 'author' ),
+		'supports' => array( 'title', 'author', 'comments' ),
 	) );
 
 	register_post_type( 'revision', array(
@@ -204,9 +207,10 @@ function update_attached_file( $attachment_id, $file ) {
 		return false;
 
 	$file = apply_filters( 'update_attached_file', $file, $attachment_id );
-	$file = _wp_relative_upload_path($file);
-
-	return update_post_meta( $attachment_id, '_wp_attached_file', $file );
+	if ( $file = _wp_relative_upload_path( $file ) )
+		return update_post_meta( $attachment_id, '_wp_attached_file', $file );
+	else
+		return delete_post_meta( $attachment_id, '_wp_attached_file' );
 }
 
 /**
@@ -492,17 +496,19 @@ final class WP_Post {
 		}
 
 		if ( 'post_category' == $key ) {
-			if ( is_object_in_taxonomy( $this->post_type, 'category' ) )
-				return wp_get_post_categories( $this->ID );
-			else
+			$terms = get_the_terms( $this, 'category' );
+			if ( ! $terms )
 				return array();
+
+			return wp_list_pluck( $terms, 'term_id' );
 		}
 
 		if ( 'tags_input' == $key ) {
-			if ( is_object_in_taxonomy( $this->post_type, 'post_tag' ) )
-				return wp_get_post_tags( $this->ID, array( 'fields' => 'names' ) );
-			else
+			$terms = get_the_terms( $this, 'post_tag' );
+			if ( ! $terms )
 				return array();
+
+			return wp_list_pluck( $terms, 'name' );
 		}
 
 		// Rest of the values need filtering
@@ -554,22 +560,19 @@ function get_post_ancestors( $post ) {
 
 	$post = get_post( $post );
 
-	if ( ! $ancestors = wp_cache_get( $post->ID, 'post_ancestors' ) ) {
-		$ancestors = array();
+	if ( empty( $post->post_parent ) || $post->post_parent == $post->ID )
+		return array();
 
-		if ( !empty( $post->post_parent ) && $post->ID != $post->post_parent ) {
-			$id = $ancestors[] = $post->post_parent;
+	$ancestors = array();
 
-			while ( $ancestor = get_post( $id ) ) {
-				// Loop detection: If the ancestor has been seen before, break.
-				if ( empty( $ancestor->post_parent ) || ( $ancestor->post_parent == $post->ID ) || in_array( $ancestor->post_parent, $ancestors ) )
-					break;
+	$id = $ancestors[] = $post->post_parent;
 
-				$id = $ancestors[] = $ancestor->post_parent;
-			}
-		}
+	while ( $ancestor = get_post( $id ) ) {
+		// Loop detection: If the ancestor has been seen before, break.
+		if ( empty( $ancestor->post_parent ) || ( $ancestor->post_parent == $post->ID ) || in_array( $ancestor->post_parent, $ancestors ) )
+			break;
 
-		wp_cache_add( $post->ID, $ancestors, 'post_ancestors' );
+		$id = $ancestors[] = $ancestor->post_parent;
 	}
 
 	return $ancestors;
@@ -2215,8 +2218,8 @@ function wp_delete_post( $postid = 0, $force_delete = false ) {
 
 	clean_post_cache( $post );
 
-	if ( is_post_type_hierarchical( $post->post_type ) ) {
-		foreach ( (array) $children as $child )
+	if ( is_post_type_hierarchical( $post->post_type ) && $children ) {
+		foreach ( $children as $child )
 			clean_post_cache( $child );
 	}
 
@@ -2633,6 +2636,18 @@ function wp_insert_post($postarr, $wp_error = false) {
 	if ( empty($post_date) || '0000-00-00 00:00:00' == $post_date )
 		$post_date = current_time('mysql');
 
+		// validate the date
+		$mm = substr( $post_date, 5, 2 );
+		$jj = substr( $post_date, 8, 2 );
+		$aa = substr( $post_date, 0, 4 );
+		$valid_date = wp_checkdate( $mm, $jj, $aa, $post_date );
+		if ( !$valid_date ) {
+			if ( $wp_error )
+				return new WP_Error( 'invalid_date', __( 'Whoops, the provided date is invalid.' ) );
+			else
+				return 0;
+		}
+
 	if ( empty($post_date_gmt) || '0000-00-00 00:00:00' == $post_date_gmt ) {
 		if ( !in_array( $post_status, array( 'draft', 'pending', 'auto-draft' ) ) )
 			$post_date_gmt = get_gmt_from_date($post_date);
@@ -2753,11 +2768,11 @@ function wp_insert_post($postarr, $wp_error = false) {
 
 	$current_guid = get_post_field( 'guid', $post_ID );
 
-	clean_post_cache( $post_ID );
-
 	// Set GUID
 	if ( !$update && '' == $current_guid )
 		$wpdb->update( $wpdb->posts, array( 'guid' => get_permalink( $post_ID ) ), $where );
+
+	clean_post_cache( $post_ID );
 
 	$post = get_post($post_ID);
 
@@ -2844,32 +2859,18 @@ function wp_update_post( $postarr = array(), $wp_error = false ) {
  * Publish a post by transitioning the post status.
  *
  * @since 2.1.0
- * @uses $wpdb
- * @uses do_action() Calls 'edit_post', 'save_post', and 'wp_insert_post' on post_id and post data.
+ * @uses wp_insert_post()
  *
- * @param int $post_id Post ID.
- * @return null
+ * @param mixed $post Post ID or object.
  */
-function wp_publish_post($post_id) {
-	global $wpdb;
-
-	$post = get_post($post_id);
-
-	if ( empty($post) )
+function wp_publish_post( $post ) {
+	if ( ! $post = get_post( $post ) )
 		return;
-
 	if ( 'publish' == $post->post_status )
 		return;
 
-	$wpdb->update( $wpdb->posts, array( 'post_status' => 'publish' ), array( 'ID' => $post_id ) );
-
-	$old_status = $post->post_status;
 	$post->post_status = 'publish';
-	wp_transition_post_status('publish', $old_status, $post);
-
-	do_action('edit_post', $post_id, $post);
-	do_action('save_post', $post_id, $post);
-	do_action('wp_insert_post', $post_id, $post);
+	wp_insert_post( $post );
 }
 
 /**
@@ -3042,11 +3043,16 @@ function wp_set_post_terms( $post_id = 0, $tags = '', $taxonomy = 'post_tag', $a
 	// Hierarchical taxonomies must always pass IDs rather than names so that children with the same
 	// names but different parents aren't confused.
 	if ( is_taxonomy_hierarchical( $taxonomy ) ) {
-		$tags = array_map( 'intval', $tags );
-		$tags = array_unique( $tags );
+		$tags = array_unique( array_map( 'intval', $tags ) );
 	}
 
-	return wp_set_object_terms($post_id, $tags, $taxonomy, $append);
+	$r = wp_set_object_terms( $post_id, $tags, $taxonomy, $append );
+	if ( is_wp_error( $r ) )
+		return $r;
+
+	wp_cache_delete( $post_id, $taxonomy . '_relationships' );
+
+	return $r;
 }
 
 /**
@@ -3075,12 +3081,7 @@ function wp_set_post_categories($post_ID = 0, $post_categories = array()) {
 		return true;
 	}
 
-	if ( !empty($post_categories) ) {
-		$post_categories = array_map('intval', $post_categories);
-		$post_categories = array_unique($post_categories);
-	}
-
-	return wp_set_object_terms($post_ID, $post_categories, 'category');
+	return wp_set_post_terms($post_ID, $post_categories, 'category');
 }
 
 /**
@@ -3770,13 +3771,12 @@ function wp_insert_attachment($object, $file = false, $parent = 0) {
 	if ( ! in_array( $post_status, array( 'inherit', 'private' ) ) )
 		$post_status = 'inherit';
 
+	if ( !empty($post_category) )
+		$post_category = array_filter($post_category); // Filter out empty terms
+
 	// Make sure we set a valid category.
-	if ( !isset($post_category) || 0 == count($post_category) || !is_array($post_category) ) {
-		// 'post' requires at least one category.
-		if ( 'post' == $post_type )
-			$post_category = array( get_option('default_category') );
-		else
-			$post_category = array();
+	if ( empty($post_category) || 0 == count($post_category) || !is_array($post_category) ) {
+		$post_category = array();
 	}
 
 	// Are we updating or creating?
@@ -3861,7 +3861,22 @@ function wp_insert_attachment($object, $file = false, $parent = 0) {
 		$wpdb->update( $wpdb->posts, compact("post_name"), array( 'ID' => $post_ID ) );
 	}
 
-	wp_set_post_categories($post_ID, $post_category);
+	if ( is_object_in_taxonomy($post_type, 'category') )
+		wp_set_post_categories( $post_ID, $post_category );
+
+	if ( isset( $tags_input ) && is_object_in_taxonomy($post_type, 'post_tag') )
+		wp_set_post_tags( $post_ID, $tags_input );
+
+	// support for all custom taxonomies
+	if ( !empty($tax_input) ) {
+		foreach ( $tax_input as $taxonomy => $tags ) {
+			$taxonomy_obj = get_taxonomy($taxonomy);
+			if ( is_array($tags) ) // array = hierarchical, string = non-hierarchical.
+				$tags = array_filter($tags);
+			if ( current_user_can($taxonomy_obj->cap->assign_terms) )
+				wp_set_post_terms( $post_ID, $tags, $taxonomy );
+		}
+	}
 
 	if ( $file )
 		update_attached_file( $post_ID, $file );
@@ -4016,9 +4031,10 @@ function wp_update_attachment_metadata( $post_id, $data ) {
 	if ( !$post = get_post( $post_id ) )
 		return false;
 
-	$data = apply_filters( 'wp_update_attachment_metadata', $data, $post->ID );
-
-	return update_post_meta( $post->ID, '_wp_attachment_metadata', $data);
+	if ( $data = apply_filters( 'wp_update_attachment_metadata', $data, $post->ID ) )
+		return update_post_meta( $post->ID, '_wp_attachment_metadata', $data );
+	else
+		return delete_post_meta( $post->ID, '_wp_attachment_metadata' );
 }
 
 /**
@@ -4485,15 +4501,6 @@ function clean_post_cache( $post ) {
 		wp_cache_delete( 'all_page_ids', 'posts' );
 		do_action( 'clean_page_cache', $post->ID );
 	}
-
-	if ( $children = $wpdb->get_results( $wpdb->prepare("SELECT ID, post_type FROM $wpdb->posts WHERE post_parent = %d", $post->ID) ) ) {
-		foreach ( $children as $child ) {
-			// Loop detection
-			if ( $child->ID == $post->ID )
-				continue;
-			clean_post_cache( $child );
-		}
-	}
 }
 
 /**
@@ -4684,19 +4691,6 @@ function _publish_post_hook($post_id) {
 	add_post_meta( $post_id, '_encloseme', '1' );
 
 	wp_schedule_single_event(time(), 'do_pings');
-}
-
-/**
- * Hook used to prevent page/post cache from staying dirty when a post is saved.
- *
- * @since 2.3.0
- * @access private
- *
- * @param int $post_id The ID in the database table for the $post
- * @param object $post Object type containing the post information
- */
-function _save_post_hook( $post_id, $post ) {
-	clean_post_cache( $post );
 }
 
 /**
@@ -5218,10 +5212,10 @@ function set_post_thumbnail( $post, $thumbnail_id ) {
 	$post = get_post( $post );
 	$thumbnail_id = absint( $thumbnail_id );
 	if ( $post && $thumbnail_id && get_post( $thumbnail_id ) ) {
-		$thumbnail_html = wp_get_attachment_image( $thumbnail_id, 'thumbnail' );
-		if ( ! empty( $thumbnail_html ) ) {
+		if ( $thumbnail_html = wp_get_attachment_image( $thumbnail_id, 'thumbnail' ) )
 			return update_post_meta( $post->ID, '_thumbnail_id', $thumbnail_id );
-		}
+		else
+			return delete_post_meta( $post->ID, '_thumbnail_id' );
 	}
 	return false;
 }
