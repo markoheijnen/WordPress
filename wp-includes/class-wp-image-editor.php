@@ -116,45 +116,44 @@ abstract class WP_Image_Editor {
 		return ( (bool) $this->quality );
 	}
 
-	protected function sanitize_extension( $filename ) {
-		$info = pathinfo( $filename );
-		$dir  = $info['dirname'];
-		$ext  = $info['extension'];
-
-		// This defaults mime-types with various extensions (.jpg/.jpeg)
-		// to a default extension.
-		$mime_type = $this->get_mime_type( $ext );
-		$new_ext = $this->get_extension( $mime_type );
-
-		return ( $dir.DIRECTORY_SEPARATOR.wp_basename( $filename, ".$ext" ).".$new_ext" );
-	}
-
-	protected function get_output_format( $filename, $mime_type ) {
+	protected function get_output_format( $filename = null, $mime_type = null ) {
 		$new_ext = null;
 
 		if ( $mime_type ) {
 			$new_ext = $this->get_extension( $mime_type );
 		}
 		else if ( $filename ) {
-			$filename = $this->sanitize_extension( $filename );
+			$new_ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+			$mime_type = $this->get_mime_type( $new_ext );
 		}
 		else {
-			// Whatever editor was chosen, it has the proper mime-type already.
+			// Use the editor's current file and mime-type.
+			$new_ext = strtolower( pathinfo( $this->file, PATHINFO_EXTENSION ) );
 			$mime_type = $this->mime_type;
-			$new_ext = $this->get_extension( $mime_type );
 		}
 
+		// Double-check that the mime-type selected is supported by the editor.
+		// If not, choose a default instead.
 		if ( ! $this->supports_mime_type( $mime_type ) ) {
 			$mime_type = apply_filters( 'image_editor_default_mime_type', $this->default_mime_type );
 			$new_ext = $this->get_extension( $mime_type );
 		}
 
-		return array( 'filename' => $filename, 'extension' => $new_ext, 'mime_type' => $mime_type );
+		if ( $filename ) {
+			$info = pathinfo( $filename );
+			$dir  = $info['dirname'];
+			$ext  = $info['extension'];
+
+			$filename = $dir.DIRECTORY_SEPARATOR.wp_basename( $filename, ".$ext" ).".{$new_ext}";
+		}
+
+		return array( $filename, $new_ext, $mime_type );
 	}
 
 	public function generate_filename( $suffix = null, $dest_path = null, $extension = null ) {
 		// $suffix will be appended to the destination filename, just before the extension
-		$suffix = $this->get_suffix();
+		if ( ! $suffix )
+			$suffix = $this->get_suffix();
 
 		$info = pathinfo( $this->file );
 		$dir  = $info['dirname'];

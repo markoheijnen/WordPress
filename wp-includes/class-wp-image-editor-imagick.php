@@ -147,7 +147,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$resize_result = $this->resize( $size_data['width'], $size_data['height'], $size_data['crop'] );
 
 			if( ! is_wp_error( $resize_result ) ) {
-				$resized = $this->save();
+				$resized = $this->_save( $this->image );
 
 				$this->image->clear();
 				$this->image->destroy();
@@ -256,23 +256,18 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		$saved = $this->_save( $this->image, $destfilename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $destfilename ?: $this->file;
-			$this->mime_type = $mime_type ?: $this->mime_type;
+			$this->file = $saved['path'];
+			$this->mime_type = $saved['mime-type'];
 		}
 
 		return $saved;
 	}
 
 	protected function _save( $image, $filename = null, $mime_type = null ) {
-		$file_info = $this->get_output_format( $filename, $mime_type );
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( $filename, $mime_type );
 
-		if( ! $file_info['filename'] ) {
-			$file_info['filename'] = $this->sanitize_extension(
-				$this->generate_filename( null, null, $file_info['extension'] ) );
-		}
-
-		// Overwrites $filename  with data from $file_info.
-		extract( $file_info );
+		if ( ! $filename )
+			$filename = $this->generate_filename( null, null, $extension );
 
 		try {
 			$this->image->setImageFormat( strtoupper( $extension ) );
@@ -291,7 +286,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			'path' => $filename,
 			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
 			'width' => $this->size['width'],
-			'height' => $this->size['height']
+			'height' => $this->size['height'],
+			'mime-type' => $mime_type,
 		);
 	}
 
@@ -302,8 +298,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean|WP_Error
 	 */
 	public function stream( $mime_type = null ) {
-		$file_info = $this->get_output_format( null, $mime_type );
-		extract ( $file_info );
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( null, $mime_type );
 
 		try {
 			// Temporarily change format for stream

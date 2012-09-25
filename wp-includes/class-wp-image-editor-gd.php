@@ -233,23 +233,18 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 		$saved = $this->_save( $this->image, $filename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $filename ? $filename : $this->file;
-			$this->mime_type = $mime_type ? $mime_type : $this->mime_type;
+			$this->file = $saved['path'];
+			$this->mime_type = $saved['mime-type'];
 		}
 
 		return $saved;
 	}
 
 	protected function _save( $image, $filename = null, $mime_type = null ) {
-		$file_info = $this->get_output_format( $filename, $mime_type );
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( $filename, $mime_type );
 
-		if( ! $file_info['filename'] ) {
-			$file_info['filename'] = $this->sanitize_extension(
-				$this->generate_filename( null, null, $file_info['extension'] ) );
-		}
-
-		// Overwrites $filename  with data from $file_info.
-		extract( $file_info );
+		if ( ! $filename )
+			$filename = $this->generate_filename( null, null, $extension );
 
 		if ( 'image/gif' == $mime_type ) {
 			if ( ! $this->make_image( $filename, 'imagegif', array( $image, $filename ) ) )
@@ -280,7 +275,8 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			'path' => $filename,
 			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
 			'width' => $this->size['width'],
-			'height' => $this->size['height']
+			'height' => $this->size['height'],
+			'mime-type'=> $mime_type,
 		);
 	}
 
@@ -290,7 +286,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @param string $mime_type
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ? $mime_type : $this->mime_type;
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( null, $mime_type );
 
 		switch ( $mime_type ) {
 			case 'image/png':
