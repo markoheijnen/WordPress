@@ -41,7 +41,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$this->mime_type = $this->get_mime_type( $this->image->getImageFormat() );
 		}
 		catch ( Exception $e ) {
-			return new WP_Error( 'error_loading_image', $e->getMessage(), $this->file );
+			return new WP_Error( 'invalid_image', $e->getMessage(), $this->file );
 		}
 
 		$updated_size = $this->update_size();
@@ -258,6 +258,13 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 		if ( ! is_wp_error( $saved ) ) {
 			$this->file = $saved['path'];
 			$this->mime_type = $saved['mime-type'];
+
+			try {
+				$this->image->setImageFormat( strtoupper( $this->get_extension( $this->mime_type ) ) );
+			}
+			catch ( Exception $e ) {
+				return new WP_Error( 'image_save_error', $e->getMessage(), $this->file );
+			}
 		}
 
 		return $saved;
@@ -270,8 +277,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 			$filename = $this->generate_filename( null, null, $extension );
 
 		try {
+			// Store initial Format
+			$orig_format = $this->image->getImageFormat();
+
 			$this->image->setImageFormat( strtoupper( $extension ) );
 			$this->make_image( $filename, array( $image, 'writeImage' ), array( $filename ) );
+
+			// Reset original Format
+			$this->image->setImageFormat( $orig_format );
 		}
 		catch ( Exception $e ) {
 			return new WP_Error( 'image_save_error', $e->getMessage(), $filename );

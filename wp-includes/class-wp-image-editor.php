@@ -117,19 +117,30 @@ abstract class WP_Image_Editor {
 	}
 
 	protected function get_output_format( $filename = null, $mime_type = null ) {
-		$new_ext = null;
+		$new_ext  = null;
 
 		if ( $mime_type ) {
 			$new_ext = $this->get_extension( $mime_type );
 		}
-		else if ( $filename ) {
-			$new_ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
-			$mime_type = $this->get_mime_type( $new_ext );
+
+		if ( $filename ) {
+			$file_ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+			$file_mime = $this->get_mime_type( $file_ext );
+
+			if ( !$mime_type || ( $file_mime == $mime_type ) ) {
+				$mime_type = $file_mime;
+				$new_ext = $file_ext;
+			}
 		}
 		else {
 			// Use the editor's current file and mime-type.
-			$new_ext = strtolower( pathinfo( $this->file, PATHINFO_EXTENSION ) );
-			$mime_type = $this->mime_type;
+			$file_ext = strtolower( pathinfo( $this->file, PATHINFO_EXTENSION ) );
+			$file_mime = $this->mime_type;
+
+			if ( !$mime_type || ( $file_mime == $mime_type ) ) {
+				$mime_type = $file_mime;
+				$new_ext = $file_ext;
+			}
 		}
 
 		// Double-check that the mime-type selected is supported by the editor.
