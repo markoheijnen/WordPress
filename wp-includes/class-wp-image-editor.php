@@ -21,7 +21,7 @@ abstract class WP_Image_Editor {
 	 * @param string $path Path to File to Load
 	 * @return WP_Image_Editor|WP_Error|boolean
 	 */
-	public final static function get_instance( $path ) {
+	public final static function get_instance( $path = null ) {
 		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
 
 		if ( $implementation ) {
