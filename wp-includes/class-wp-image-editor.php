@@ -67,7 +67,7 @@ abstract class WP_Image_Editor {
 
 	abstract public static function test(); // returns bool
 	abstract protected function load(); // returns bool|WP_Error
-	abstract public function supports_mime_type( $mime_type); // returns bool
+	abstract public static function supports_mime_type( $mime_type ); // returns bool
 	abstract public function resize( $max_w, $max_h, $crop = false );
 	abstract public function multi_resize( $sizes );
 	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
@@ -273,7 +273,7 @@ abstract class WP_Image_Editor {
 	 * @param string $extension
 	 * @return string|boolean
 	 */
-	static protected function get_mime_type( $extension ) {
+	protected static function get_mime_type( $extension = null ) {
 		$mime_types = wp_get_mime_types();
 		$extensions = array_keys( $mime_types );
 
@@ -296,7 +296,7 @@ abstract class WP_Image_Editor {
 	 * @param string $mime_type
 	 * @return string|boolean
 	 */
-	static protected function get_extension( $mime_type ) {
+	protected static function get_extension( $mime_type = null ) {
 		$extensions = explode( '|', array_search( $mime_type, wp_get_mime_types() ) );
 
 		return $extensions[0];
