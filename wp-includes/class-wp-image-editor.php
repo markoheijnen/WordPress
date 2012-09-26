@@ -173,7 +173,7 @@ abstract class WP_Image_Editor {
 			$dir  = $info['dirname'];
 			$ext  = $info['extension'];
 
-			$filename = $dir.DIRECTORY_SEPARATOR.wp_basename( $filename, ".$ext" ).".{$new_ext}";
+			$filename = trailingslashit( $dir ) . wp_basename( $filename, ".$ext" ) . ".{$new_ext}";
 		}
 
 		return array( $filename, $new_ext, $mime_type );
@@ -205,7 +205,7 @@ abstract class WP_Image_Editor {
 		if ( ! is_null( $dest_path ) && $_dest_path = realpath( $dest_path ) )
 			$dir = $_dest_path;
 
-		return $dir.DIRECTORY_SEPARATOR."{$name}-{$suffix}.{$new_ext}";
+		return trailingslashit( $dir ) . "{$name}-{$suffix}.{$new_ext}";
 	}
 
 	/**
