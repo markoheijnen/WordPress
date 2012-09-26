@@ -146,6 +146,7 @@ require( ABSPATH . WPINC . '/admin-bar.php' );
 require( ABSPATH . WPINC . '/class-wp-image-editor.php' );
 require( ABSPATH . WPINC . '/class-wp-image-editor-gd.php' );
 require( ABSPATH . WPINC . '/class-wp-image-editor-imagick.php' );
+require( ABSPATH . WPINC . '/class-wp-image-editor-imagemagick.php' );
 
 // Load multisite-specific files.
 if ( is_multisite() ) {
