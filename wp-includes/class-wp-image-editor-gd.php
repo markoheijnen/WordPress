@@ -14,6 +14,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Checks to see if GD is available.
 	 *
 	 * @since 3.5
+	 * @access protected
 	 *
 	 * @return boolean
 	 */
@@ -28,6 +29,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * Loads image from $this->file into GD Resource
 	 *
 	 * @since 3.5
+	 * @access protected
 	 *
 	 * @return boolean|\WP_Error
 	 */
@@ -50,23 +52,53 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			return new WP_Error( 'invalid_image', __('Could not read image size.'), $this->file );
 
 		$this->update_size( $size[0], $size[1] );
-		$this->orig_type = $size['mime'];
+		$this->mime_type = $size['mime'];
 
 		return true;
 	}
 
+	/**
+	 * Sets or updates current image size
+	 *
+	 * @since 3.5.0
+	 * @access protected
+	 *
+	 * @param int $width
+	 * @param int $height
+	 */
 	protected function update_size( $width = false, $height = false ) {
-		return parent::update_size( $width ? $width : imagesx( $this->image ), $height ? $height : imagesy( $this->image ) );
+		if ( ! $width )
+			$width = imagesx( $this->image );
+
+		if ( ! $height )
+			$height = imagesy( $this->image );
+
+		return parent::update_size( $width, $height );
 	}
 
 	/**
-	 * Resizes Image.
+	 * Checks to see if editor supports mime-type specified
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type
+	 * @return boolean
+	 */
+	public static function supports_mime_type( $mime_type ) {
+		$allowed_mime_types = array( 'image/gif', 'image/png', 'image/jpeg' );
+
+		return in_array( $mime_type, $allowed_mime_types );
+	}
+
+	/**
+	 * Resizes current image.
 	 * Wrapper around _resize, since _resize returns a GD Resource
 	 *
 	 * @param int $max_w
 	 * @param int $max_h
 	 * @param boolean $crop
-	 * @return boolean
+	 * @return boolean|WP_Error
 	 */
 	public function resize( $max_w, $max_h, $crop = false ) {
 		if ( ( $this->size['width'] == $max_w ) && ( $this->size['height'] == $max_h ) )
@@ -145,8 +177,11 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
 		// If destination width/height isn't specified, use same as
 		// width/height from source.
-		$dst_w = $dst_w ? $dst_w : $src_w;
-		$dst_h = $dst_h ? $dst_h : $src_h;
+		if ( ! $dst_w )
+			$dst_w = $src_w;
+		if ( ! $dst_h )
+			$dst_h = $src_h;
+
 		$dst = wp_imagecreatetruecolor( $dst_w, $dst_h );
 
 		if ( $src_abs ) {
@@ -170,11 +205,14 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	}
 
 	/**
-	 * Rotates in memory image by $angle.
+	 * Rotates current image counter-clockwise by $angle.
 	 * Ported from image-edit.php
 	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
 	 * @param float $angle
-	 * @return boolean
+	 * @return boolean|WP_Error
 	 */
 	public function rotate( $angle ) {
 		if ( function_exists('imagerotate') ) {
@@ -193,8 +231,9 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	/**
 	 * Flips current image
 	 *
-	 * @param boolean $horz
-	 * @param boolean $vert
+	 * @param boolean $horz Horizonal Flip
+	 * @param boolean $vert Vertical Flip
+	 * @returns boolean|WP_Error
 	 */
 	public function flip( $horz, $vert ) {
 		$w = $this->size['width'];
@@ -221,28 +260,27 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @param string $destfilename
 	 * @param string $mime_type
-	 * @return array
+	 * @return array|WP_Error {'path'=>string, 'file'=>string, 'width'=>int, 'height'=>int, 'mime-type'=>string}
 	 */
-	public function save( $destfilename = null, $mime_type = null ) {
-		$saved = $this->_save( $this->image, $destfilename, $mime_type );
+	public function save( $filename = null, $mime_type = null ) {
+		$saved = $this->_save( $this->image, $filename, $mime_type );
 
 		if ( ! is_wp_error( $saved ) ) {
-			$this->file = $destfilename ? $destfilename : $this->file;
-			$this->orig_type = $mime_type ? $mime_type : $this->orig_type;
+			$this->file = $saved['path'];
+			$this->mime_type = $saved['mime-type'];
 		}
 
 		return $saved;
 	}
 
-	protected function _save( $image, $destfilename = null, $mime_type = null ) {
-		$mime_type = $mime_type ? $mime_type : $this->orig_type;
-		/**
-		 * Correct Filename, to comply with Imagick's mime_type annoyance.
-		 * $destfilename = $destfilename ? $destfilename : $this->generate_filename( null, null, );
-		 */
+	protected function _save( $image, $filename = null, $mime_type = null ) {
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( $filename, $mime_type );
+
+		if ( ! $filename )
+			$filename = $this->generate_filename( null, null, $extension );
 
 		if ( 'image/gif' == $mime_type ) {
-			if ( ! $this->make_image( $destfilename, 'imagegif', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $filename, 'imagegif', array( $image, $filename ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		elseif ( 'image/png' == $mime_type ) {
@@ -250,36 +288,40 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			if ( function_exists('imageistruecolor') && ! imageistruecolor( $image ) )
 				imagetruecolortopalette( $image, false, imagecolorstotal( $image ) );
 
-			if ( ! $this->make_image( $destfilename, 'imagepng', array( $image, $destfilename ) ) )
+			if ( ! $this->make_image( $filename, 'imagepng', array( $image, $filename ) ) )
+				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
+		}
+		elseif ( 'image/jpeg' == $mime_type ) {
+			if ( ! $this->make_image( $filename, 'imagejpeg', array( $image, $filename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
 				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 		else {
-			if ( ! $this->make_image( $destfilename, 'imagejpeg', array( $image, $destfilename, apply_filters( 'jpeg_quality', $this->quality, 'image_resize' ) ) ) )
-				return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
+			return new WP_Error( 'image_save_error', __('Image Editor Save Failed') );
 		}
 
 		// Set correct file permissions
-		$stat = stat( dirname( $destfilename ) );
+		$stat = stat( dirname( $filename ) );
 		$perms = $stat['mode'] & 0000666; //same permissions as parent folder, strip off the executable bits
-		@ chmod( $destfilename, $perms );
+		@ chmod( $filename, $perms );
 
 		return array(
-			'path' => $destfilename,
-			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $destfilename ) ),
+			'path' => $filename,
+			'file' => wp_basename( apply_filters( 'image_make_intermediate_size', $filename ) ),
 			'width' => $this->size['width'],
-			'height' => $this->size['height']
+			'height' => $this->size['height'],
+			'mime-type'=> $mime_type,
 		);
 	}
 
 	/**
 	 * Returns stream of current image
-	 * 
+	 *
 	 * @param string $mime_type
 	 */
 	public function stream( $mime_type = null ) {
-		$mime_type = $mime_type ? $mime_type : $this->orig_type;
+		list( $filename, $extension, $mime_type ) = $this->get_output_format( null, $mime_type );
 
-		switch ( $this->orig_type ) {
+		switch ( $mime_type ) {
 			case 'image/png':
 				header( 'Content-Type: image/png' );
 				return imagepng( $this->image );

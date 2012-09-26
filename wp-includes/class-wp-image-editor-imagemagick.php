@@ -4,6 +4,73 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 	private static $convert_bin = null; // ImageMagick executable
 	protected $image = null; // Imagemagick Object
 
+	public $imagemagick_exceptions = array(
+		'0' => array( 'Success', '' ),
+		'300' => array( 'Resource Limit', 'A program resource is exhausted (e.g. not enough memory)' ),
+		'305' => array( 'Type', 'A font is unavailable; a substitution may have occurred' ),
+		'310' => array( 'Option', 'A command-line option was malformed' ),
+		'315' => array( 'Delegate', 'An ImageMagick delegate failed to complete' ),
+		'320' => array( 'Missing Delegate', 'The image type can not be read or written because the appropriate Delegate is missing' ),
+		'325' => array( 'Corrupt Image', 'The image file may be corrupt', ),
+		'330' => array( 'FileOpen', 'The image file could not be opened for reading or writing', ),
+		'335' => array( 'Blob', 'A binary large object could not be allocated, read, or written' ),
+		'340' => array( 'Stream', 'There was a problem reading or writing from a stream' ),
+		'345' => array( 'Cache', 'Pixels could not be read or written to the pixel cache' ),
+		'350' => array( 'Coder', 'There was a problem with an image coder' ),
+		'355' => array( 'Module', 'There was a problem with an image module' ),
+		'360' => array( 'Draw', 'A drawing operation failed' ),
+		'365' => array( 'Image', 'The operation could not complete due to an incompatible image' ),
+		'370' => array( 'Wand', 'Here was a problem specific to the MagickWand API' ),
+		'375' => array( 'Random', 'There is a problem generating a true or pseudo-random number' ),
+		'380' => array( 'XServer', 'An X resource is unavailable' ),
+		'385' => array( 'Monitor', 'There was a problem activating the progress monitor' ),
+		'390' => array( 'Registry', 'There was a problem getting or setting the registry' ),
+		'395' => array( 'Configure', 'There was a problem getting a configuration file' ),
+		'399' => array( 'Policy', 'A policy denies access to a delegate, coder, filter, path, or resource' ),
+		'400' => array( 'Resource Limit', 'A program resource is exhausted (e.g. not enough memory)' ),
+		'405' => array( 'Type', 'A font is unavailable; a substitution may have occurred' ),
+		'410' => array( 'Option', 'A command-line option was malformed' ),
+		'415' => array( 'Delegate', 'An ImageMagick delegate failed to complete' ),
+		'420' => array( 'Missing Delegate', 'The image type can not be read or written because the appropriate Delegate is missing' ),
+		'425' => array( 'Corrupt Image', 'The image file may be corrupt', ),
+		'430' => array( 'FileOpen', 'The image file could not be opened for reading or writing', ),
+		'435' => array( 'Blob', 'A binary large object could not be allocated, read, or written' ),
+		'440' => array( 'Stream', 'There was a problem reading or writing from a stream' ),
+		'445' => array( 'Cache', 'Pixels could not be read or written to the pixel cache' ),
+		'450' => array( 'Coder', 'There was a problem with an image coder' ),
+		'455' => array( 'Module', 'There was a problem with an image module' ),
+		'460' => array( 'Draw', 'A drawing operation failed' ),
+		'465' => array( 'Image', 'The operation could not complete due to an incompatible image' ),
+		'470' => array( 'Wand', 'Here was a problem specific to the MagickWand API' ),
+		'475' => array( 'Random', 'There is a problem generating a true or pseudo-random number' ),
+		'480' => array( 'XServer', 'An X resource is unavailable' ),
+		'485' => array( 'Monitor', 'There was a problem activating the progress monitor' ),
+		'490' => array( 'Registry', 'There was a problem getting or setting the registry' ),
+		'495' => array( 'Configure', 'There was a problem getting a configuration file' ),
+		'499' => array( 'Policy', 'A policy denies access to a delegate, coder, filter, path, or resource' ),
+		'700' => array( 'Resource Limit', 'A program resource is exhausted (e.g. not enough memory)' ),
+		'705' => array( 'Type', 'A font is unavailable; a substitution may have occurred' ),
+		'710' => array( 'Option', 'A command-line option was malformed' ),
+		'715' => array( 'Delegate', 'An ImageMagick delegate failed to complete' ),
+		'720' => array( 'Missing Delegate', 'The image type can not be read or written because the appropriate Delegate i missing' ),
+		'725' => array( 'Corrupt Image', 'The image file may be corrupt', ),
+		'730' => array( 'FileOpen', 'The image file could not be opened for reading or writing', ),
+		'735' => array( 'Blob', 'A binary large object could not be allocated, read, or written' ),
+		'740' => array( 'Stream', 'There was a problem reading or writing from a stream' ),
+		'745' => array( 'Cache', 'Pixels could not be read or written to the pixel cache' ),
+		'750' => array( 'Coder', 'There was a problem with an image coder' ),
+		'755' => array( 'Module', 'There was a problem with an image module' ),
+		'760' => array( 'Draw', 'A drawing operation failed' ),
+		'765' => array( 'Image', 'The operation could not cmplete due to an incompatible image' ),
+		'770' => array( 'Wand', 'Here was a problem specific to the MagickWand API' ),
+		'775' => array( 'Random', 'There is a problem generating a true or pseudo-random number' ),
+		'780' => array( 'XServer', 'An X resource is unavailable' ),
+		'785' => array( 'Monitor', 'There was a problem activating the progress monitor' ),
+		'790' => array( 'Registry', 'There was a problem getting or setting the registry' ),
+		'795' => array( 'Configure', 'There was a problem getting a configuration file' ),
+		'799' => array( 'Policy', 'A policy denies access to a delegate, coder, filter, path, or resource' ),
+	);
+
 	function __destruct() {
 		if ( $this->image ) {
 			// we don't need the original in memory anymore
@@ -13,26 +80,9 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		}
 	}
 
-	protected function find_exec() {
-		exec( "type convert", $type, $type_rcode );
-
-		if ( ! $type_rcode ) {
-			$convert_type = explode( ' ', $type[0] );
-			self::$convert_bin = $convert_type[0];
-		} else {
-			exec( "locate " . escapeshellarg( "*/convert" ), $locate, $locate_rcode );
-
-			foreach ( $locate as $binary ) {
-				if ( '/usr/local/bin/convert' == $binary || '/usr/bin/convert' == $binary ) {
-					self::$convert_bin = $binary;
-				}
-			}
-		}
-	}
-
-	function run_convert( $command, $returnbool = false, $debug = false ) {
+	function run_convert( $command, $returnbool = false, $debug = true ) {
 		if ( ! self::$convert_bin )
-			self::find_exec();
+			self::$convert_bin = apply_filters( 'find_imagemagic_convert', array( '/usr/bin/convert', '/usr/local/bin/convert' ) );
 
 		$command = self::$convert_bin . ' ' . $command;
 		if ( $debug )
@@ -40,6 +90,20 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 		exec( $command, $convert_data, $return_code );
 		if ( $debug )
 			echo '<pre>Output:' . "\n" . print_r( $convert_data, true ) . '</pre>';
+		if ( $debug )
+			echo '<pre>RETURN: ' . $return_code . '</pre>';
+
+		if ( $return_code ) {
+			if ( $return_code >= 300 && $return_code <= 399 )
+				return new WP_Error( $this->imagemagick_exceptions[$return_code][0], 'Warning: %s', $this->imagemagick_exceptions[$return_code][1] );
+			elseif ( $return_code >= 400 && $return_code <= 499 )
+				return new WP_Error( $this->imagemagick_exceptions[$return_code][0], 'Error: %s', $this->imagemagick_exceptions[$return_code][1] );
+			elseif ( $return_code >= 700 && $return_code <= 799 )
+				return new WP_Error( $this->imagemagick_exceptions[$return_code][0], 'Fatal Error: %s', $this->imagemagick_exceptions[$return_code][1] );
+			else
+				return new WP_Error( 'imagemagick_unknown', 'Unknown Error: %s', $return_code );
+		}
+
 		if ( $returnbool )
 			return ( $return_code ) ? false : true;
 		else
@@ -288,7 +352,7 @@ class WP_Image_Editor_Imagemagick extends WP_Image_Editor {
 
 		try {
 			if ( apply_filters( 'wp_editors_stripimage', true ) ) {
-				$this->run_convert( sprintf( $this->image . ' -strip' ) );
+				$this->run_convert( sprintf( $this->image . ' -strip %s', escapeshellarg( $this->image ) ) );
 			}
 
 			$imagemagick_extension = null;

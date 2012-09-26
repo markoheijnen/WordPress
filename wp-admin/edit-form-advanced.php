@@ -22,6 +22,8 @@ if ( post_type_supports($post_type, 'editor') || post_type_supports($post_type, 
 	wp_enqueue_style( 'media-views' );
 	wp_plupload_default_settings();
 	add_action( 'admin_footer', 'wp_print_media_templates' );
+
+	wp_enqueue_script( 'mce-view' );
 }
 
 /**
@@ -63,6 +65,7 @@ $messages['page'] = array(
 	 9 => sprintf( __('Page scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview page</a>'), date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink($post_ID) ) ),
 	10 => sprintf( __('Page draft updated. <a target="_blank" href="%s">Preview page</a>'), esc_url( add_query_arg( 'preview', 'true', get_permalink($post_ID) ) ) ),
 );
+$messages['attachment'] = array_fill( 1, 10, __( 'Media attachment updated' ) ); // Hack, for now.
 
 $messages = apply_filters( 'post_updated_messages', $messages );
 
@@ -77,7 +80,7 @@ if ( isset($_GET['message']) ) {
 
 $notice = false;
 $form_extra = '';
-if ( 'auto-draft' == $post->post_status ) {
+if ( 'auto-draft' == get_post_status( $post ) ) {
 	if ( 'edit' == $action )
 		$post->post_title = '';
 	$autosave = false;
@@ -106,13 +109,21 @@ $post_type_object = get_post_type_object($post_type);
 // All meta boxes should be defined and added before the first do_meta_boxes() call (or potentially during the do_meta_boxes action).
 require_once('./includes/meta-boxes.php');
 
-add_meta_box('submitdiv', __('Publish'), 'post_submit_meta_box', null, 'side', 'core');
+if ( 'attachment' == $post_type ) {
+	wp_enqueue_script( 'image-edit' );
+	wp_enqueue_style( 'imgareaselect' );
+	add_meta_box( 'submitdiv', __('Save'), 'attachment_submit_meta_box', null, 'side', 'core' );
+	add_meta_box( 'attachmentdata', __('Attachment Page Content'), 'attachment_data_meta_box', null, 'normal', 'core' );
+	add_action( 'edit_form_after_title', 'edit_form_image_editor' );
+} else {
+	add_meta_box( 'submitdiv', __( 'Publish' ), 'post_submit_meta_box', null, 'side', 'core' );
+}
 
 if ( current_theme_supports( 'post-formats' ) && post_type_supports( $post_type, 'post-formats' ) )
 	add_meta_box( 'formatdiv', _x( 'Format', 'post format' ), 'post_format_meta_box', null, 'side', 'core' );
 
 // all taxonomies
-foreach ( get_object_taxonomies($post_type) as $tax_name ) {
+foreach ( get_object_taxonomies( $post ) as $tax_name ) {
 	$taxonomy = get_taxonomy($tax_name);
 	if ( ! $taxonomy->show_ui )
 		continue;
@@ -144,10 +155,10 @@ do_action('dbx_post_advanced');
 if ( post_type_supports($post_type, 'comments') )
 	add_meta_box('commentstatusdiv', __('Discussion'), 'post_comment_status_meta_box', null, 'normal', 'core');
 
-if ( ('publish' == $post->post_status || 'private' == $post->post_status) && post_type_supports($post_type, 'comments') )
+if ( ( 'publish' == get_post_status( $post ) || 'private' == get_post_status( $post ) ) && post_type_supports($post_type, 'comments') )
 	add_meta_box('commentsdiv', __('Comments'), 'post_comment_meta_box', null, 'normal', 'core');
 
-if ( !( 'pending' == $post->post_status && !current_user_can( $post_type_object->cap->publish_posts ) ) )
+if ( ! ( 'pending' == get_post_status( $post ) && ! current_user_can( $post_type_object->cap->publish_posts ) ) )
 	add_meta_box('slugdiv', __('Slug'), 'post_slug_meta_box', null, 'normal', 'core');
 
 if ( post_type_supports($post_type, 'author') ) {
@@ -242,6 +253,22 @@ if ( 'post' == $post_type ) {
 			'<p>' . __('<a href="http://codex.wordpress.org/Pages_Screen#Editing_Individual_Pages" target="_blank">Documentation on Editing Pages</a>') . '</p>' .
 			'<p>' . __('<a href="http://wordpress.org/support/" target="_blank">Support Forums</a>') . '</p>'
 	);
+} elseif ( 'attachment' == $post_type ) {
+	get_current_screen()->add_help_tab( array(
+		'id'      => 'overview',
+		'title'   => __('Overview'),
+		'content' =>
+			'<p>' . __('This screen allows you to edit four fields for metadata in a file within the media library.') . '</p>' .
+			'<p>' . __('For images only, you can click on Edit Image under the thumbnail to expand out an inline image editor with icons for cropping, rotating, or flipping the image as well as for undoing and redoing. The boxes on the right give you more options for scaling the image, for cropping it, and for cropping the thumbnail in a different way than you crop the original image. You can click on Help in those boxes to get more information.') . '</p>' .
+			'<p>' . __('Note that you crop the image by clicking on it (the Crop icon is already selected) and dragging the cropping frame to select the desired part. Then click Save to retain the cropping.') . '</p>' .
+			'<p>' . __('Remember to click Update Media to save metadata entered or changed.') . '</p>'
+	) );
+
+	get_current_screen()->set_help_sidebar(
+	'<p><strong>' . __('For more information:') . '</strong></p>' .
+	'<p>' . __('<a href="http://codex.wordpress.org/Media_Add_New_Screen#Edit_Media" target="_blank">Documentation on Edit Media</a>') . '</p>' .
+	'<p>' . __('<a href="http://wordpress.org/support/" target="_blank">Support Forums</a>') . '</p>'
+	);
 }
 
 require_once('./admin-header.php');
@@ -269,7 +296,7 @@ require_once('./admin-header.php');
 <input type="hidden" id="active_post_lock" value="<?php echo esc_attr( implode( ':', $active_post_lock ) ); ?>" />
 <?php
 }
-if ( 'draft' != $post->post_status )
+if ( 'draft' != get_post_status( $post ) )
 	wp_original_referer_field(true, 'previous');
 
 echo $form_extra;
@@ -294,12 +321,12 @@ wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false );
 $sample_permalink_html = $post_type_object->public ? get_sample_permalink_html($post->ID) : '';
 $shortlink = wp_get_shortlink($post->ID, 'post');
 if ( !empty($shortlink) )
-    $sample_permalink_html .= '<input id="shortlink" type="hidden" value="' . esc_attr($shortlink) . '" /><a href="#" class="button button-tiny" onclick="prompt(&#39;URL:&#39;, jQuery(\'#shortlink\').val()); return false;">' . __('Get Shortlink') . '</a>';
+    $sample_permalink_html .= '<input id="shortlink" type="hidden" value="' . esc_attr($shortlink) . '" /><a href="#" class="button button-small" onclick="prompt(&#39;URL:&#39;, jQuery(\'#shortlink\').val()); return false;">' . __('Get Shortlink') . '</a>';
 
-if ( $post_type_object->public && ! ( 'pending' == $post->post_status && !current_user_can( $post_type_object->cap->publish_posts ) ) ) { ?>
+if ( $post_type_object->public && ! ( 'pending' == get_post_status( $post ) && !current_user_can( $post_type_object->cap->publish_posts ) ) ) { ?>
 	<div id="edit-slug-box">
 	<?php
-		if ( ! empty($post->ID) && ! empty($sample_permalink_html) && 'auto-draft' != $post->post_status )
+		if ( $sample_permalink_html && 'auto-draft' != get_post_status( $post ) )
 			echo $sample_permalink_html;
 	?>
 	</div>
@@ -310,10 +337,14 @@ if ( $post_type_object->public && ! ( 'pending' == $post->post_status && !curren
 <?php
 wp_nonce_field( 'samplepermalink', 'samplepermalinknonce', false );
 ?>
-</div>
-<?php } ?>
+</div><!-- /titlediv -->
+<?php
+}
 
-<?php if ( post_type_supports($post_type, 'editor') ) { ?>
+do_action( 'edit_form_after_title' );
+
+if ( post_type_supports($post_type, 'editor') ) {
+?>
 <div id="postdivrich" class="postarea">
 
 <?php wp_editor($post->post_content, 'content', array('dfw' => true, 'tabfocus_elements' => 'sample-permalink,post-preview') ); ?>
@@ -323,7 +354,7 @@ wp_nonce_field( 'samplepermalink', 'samplepermalinknonce', false );
 	<td class="autosave-info">
 	<span class="autosave-message">&nbsp;</span>
 <?php
-	if ( 'auto-draft' != $post->post_status ) {
+	if ( 'auto-draft' != get_post_status( $post ) ) {
 		echo '<span id="last-edit">';
 		if ( $last_id = get_post_meta($post_ID, '_edit_last', true) ) {
 			$last_user = get_userdata($last_id);

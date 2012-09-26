@@ -439,14 +439,14 @@ function wp_network_dashboard_right_now() {
 	<form action="<?php echo network_admin_url('users.php'); ?>" method="get">
 		<p>
 			<input type="search" name="s" value="" size="30" autocomplete="off" />
-			<?php submit_button( __( 'Search Users' ), 'small', 'submit', false, array( 'id' => 'submit_users' ) ); ?>
+			<?php submit_button( __( 'Search Users' ), 'button', 'submit', false, array( 'id' => 'submit_users' ) ); ?>
 		</p>
 	</form>
 
 	<form action="<?php echo network_admin_url('sites.php'); ?>" method="get">
 		<p>
 			<input type="search" name="s" value="" size="30" autocomplete="off" />
-			<?php submit_button( __( 'Search Sites' ), 'small', 'submit', false, array( 'id' => 'submit_sites' ) ); ?>
+			<?php submit_button( __( 'Search Sites' ), 'button', 'submit', false, array( 'id' => 'submit_sites' ) ); ?>
 		</p>
 	</form>
 <?php
@@ -503,8 +503,8 @@ function wp_dashboard_quick_press() {
 ?>
 
 	<form name="post" action="<?php echo esc_url( admin_url( 'post.php' ) ); ?>" method="post" id="quick-press">
-		<h4 id="quick-post-title"><label for="title"><?php _e('Title') ?></label></h4>
-		<div class="input-text-wrap">
+		<div class="input-text-wrap" id="title-wrap">
+			<label class="screen-reader-text prompt" for="title" id="title-prompt-text"><?php _e( 'Enter title here' ); ?></label>
 			<input type="text" name="post_title" id="title" autocomplete="off" value="<?php echo esc_attr( $post->post_title ); ?>" />
 		</div>
 
@@ -514,15 +514,15 @@ function wp_dashboard_quick_press() {
 		</div>
 		<?php endif; ?>
 
-		<h4 id="content-label"><label for="content"><?php _e('Content') ?></label></h4>
 		<div class="textarea-wrap">
+			<label class="screen-reader-text" for="content"><?php _e( 'Content' ); ?></label>
 			<textarea name="content" id="content" class="mceEditor" rows="3" cols="15"><?php echo esc_textarea( $post->post_content ); ?></textarea>
 		</div>
 
 		<script type="text/javascript">edCanvas = document.getElementById('content');edInsertContent = null;</script>
 
-		<h4><label for="tags-input"><?php _e('Tags') ?></label></h4>
-		<div class="input-text-wrap">
+		<div class="input-text-wrap" id="tags-input-wrap">
+			<label class="screen-reader-text prompt" for="tags-input" id="tags-input-prompt-text"><?php _e( 'Tags (separate with commas)' ); ?></label>
 			<input type="text" name="tags_input" id="tags-input" value="<?php echo get_tags_to_edit( $post->ID ); ?>" />
 		</div>
 
@@ -916,7 +916,7 @@ function wp_dashboard_plugins_output() {
 
 	if ( false === $plugin_slugs = get_transient( 'plugin_slugs' ) ) {
 		$plugin_slugs = array_keys( get_plugins() );
-		set_transient( 'plugin_slugs', $plugin_slugs, 86400 );
+		set_transient( 'plugin_slugs', $plugin_slugs, DAY_IN_SECONDS );
 	}
 
 	foreach ( array( 'popular' => __('Most Popular'), 'new' => __('Newest Plugins') ) as $feed => $label ) {
@@ -1024,7 +1024,7 @@ function wp_dashboard_cached_rss_widget( $widget_id, $callback, $check_urls = ar
 		array_unshift( $args, $widget_id );
 		ob_start();
 		call_user_func_array( $callback, $args );
-		set_transient( $cache_key, ob_get_flush(), 43200); // Default lifetime in cache of 12 hours (same as the feeds)
+		set_transient( $cache_key, ob_get_flush(), 12 * HOUR_IN_SECONDS ); // Default lifetime in cache of 12 hours (same as the feeds)
 	}
 
 	return true;
@@ -1215,7 +1215,7 @@ function wp_check_browser_version() {
 		if ( ! is_array( $response ) )
 			return false;
 
-		set_site_transient( 'browser_' . $key, $response, 604800 ); // cache for 1 week
+		set_site_transient( 'browser_' . $key, $response, WEEK_IN_SECONDS );
 	}
 
 	return $response;

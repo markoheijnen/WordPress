@@ -43,10 +43,10 @@ td {
 }
 
 /* Author profiles */
-#author-avatar {
+.author-avatar {
 	float: right;
 }
-#author-description {
+.author-description {
 	float: right;
 	margin-right: 15px;
 	margin-right: 1.071428571rem;
@@ -93,16 +93,11 @@ article.format-link .entry-content {
 }
 
 /* Status posts */
-.format-status .entry-content p {
-	margin-left: 48px;
-	margin-left: 3.428571429rem;
-	margin-right: auto;
-}
-.format-status div.avatar {
-	float: left;
-	margin-left: auto;
-	margin-right: 14px;
-	margin-right: 1rem;
+.format-status .entry-header img {
+	float: right;
+	margin-left: 21px;
+	margin-left: 1.5rem;
+	margin-right: 0;
 }
 
 
@@ -146,10 +141,10 @@ label ~ span.required {
 }
 
 
-/* =Home page template styling
+/* =Front page template styling
 -------------------------------------------------------------- */
 
-.template-home .widget-area .widget_text img {
+.template-front-page .widget-area .widget_text img {
 	float: right;
 	margin: 8px 0 8px 24px;
 	margin: 0.571428571rem 0 0.571428571rem 1.714285714rem;
@@ -188,7 +183,7 @@ label ~ span.required {
 /* Minimum width of 600 pixels. */
 @media screen and (min-width: 600px) {
 	.site-content,
-	.template-home.has-post-thumbnail article {
+	.template-front-page.has-post-thumbnail article {
 		float: right;
 	}
 	.widget-area,
@@ -199,19 +194,19 @@ label ~ span.required {
 	.site-header h2 {
 		text-align: right;
 	}
-	.template-home .widget-area .widget_text img {
+	.template-front-page .widget-area .widget_text img {
 		float: right;
 		margin: 8px 0 8px 24px;
 	}
-	.template-home .widget-area .widget,
-	.template-home .widget-area.two .home-widgets {
+	.template-front-page .widget-area .widget,
+	.template-front-page.two-sidebars .widget-area .front-widgets {
 		float: right;
 	}
-	.template-home .widget-area .widget:nth-child(odd) {
+	.template-front-page .widget-area .widget:nth-child(odd) {
 		clear: left;
 	}
-	.template-home .widget-area .widget:nth-child(even),
-	.template-home .widget-area.two .home-widgets + .home-widgets {
+	.template-front-page .widget-area .widget:nth-child(even),
+	.template-front-page.two-sidebars .widget-area .front-widgets + .front-widgets {
 		float: left;
 		margin: 0 24px 0;
 		margin: 0 1.714285714rem 0;

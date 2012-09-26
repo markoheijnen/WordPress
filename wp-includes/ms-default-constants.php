@@ -18,18 +18,23 @@
 function ms_upload_constants() {
 	global $wpdb;
 
+	// This filter is attached in ms-default-filters.php but that file is not included during SHORTINIT.
+	add_filter( 'default_site_option_ms_files_rewriting', '__return_true' );
+
 	if ( ! get_site_option( 'ms_files_rewriting' ) )
 		return;
 
-	/** @since 3.0.0 */
 	// Base uploads dir relative to ABSPATH
 	if ( !defined( 'UPLOADBLOGSDIR' ) )
 		define( 'UPLOADBLOGSDIR', 'wp-content/blogs.dir' );
 
-	/** @since 3.0.0 */
-	if ( !defined( 'UPLOADS' ) ) {
+	// The main site in a post-MU network uses wp-content/uploads.
+	// This used to be handled in wp_upload_dir() by ignoring UPLOADS for this case. Avoid defining it instead.
+	if ( ! defined( 'UPLOADS' ) ) {
+		if ( ! ( is_main_site() && defined( 'MULTISITE' ) ) )
+			define( 'UPLOADS', UPLOADBLOGSDIR . "/{$wpdb->blogid}/files/" );
+
 		// Uploads dir relative to ABSPATH
-		define( 'UPLOADS', UPLOADBLOGSDIR . "/{$wpdb->blogid}/files/" );
 		if ( 'wp-content/blogs.dir' == UPLOADBLOGSDIR && ! defined( 'BLOGUPLOADDIR' ) )
 			define( 'BLOGUPLOADDIR', WP_CONTENT_DIR . "/blogs.dir/{$wpdb->blogid}/files/" );
 	}

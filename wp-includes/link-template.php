@@ -106,7 +106,7 @@ function get_permalink( $id = 0, $leavename = false ) {
 	if ( $post->post_type == 'page' )
 		return get_page_link($post->ID, $leavename, $sample);
 	elseif ( $post->post_type == 'attachment' )
-		return get_attachment_link($post->ID);
+		return get_attachment_link( $post->ID, $leavename );
 	elseif ( in_array($post->post_type, get_post_types( array('_builtin' => false) ) ) )
 		return get_post_permalink($post->ID, $leavename, $sample);
 
@@ -292,9 +292,10 @@ function _get_page_link( $post = false, $leavename = false, $sample = false ) {
  * @since 2.0.0
  *
  * @param mixed $post Optional. Post ID or object.
+ * @param bool $leavename Optional. Leave name.
  * @return string
  */
-function get_attachment_link( $post = null ) {
+function get_attachment_link( $post = null, $leavename = false ) {
 	global $wp_rewrite;
 
 	$link = false;
@@ -314,7 +315,10 @@ function get_attachment_link( $post = null ) {
 			$name = $post->post_name;
 
 		if ( strpos($parentlink, '?') === false )
-			$link = user_trailingslashit( trailingslashit($parentlink) . $name );
+			$link = user_trailingslashit( trailingslashit($parentlink) . '%postname%' );
+
+		if ( ! $leavename )
+			$link = str_replace( '%postname%', $name, $link );
 	}
 
 	if ( ! $link )
@@ -1166,23 +1170,23 @@ function get_adjacent_post( $in_same_cat = false, $excluded_categories = '', $pr
 	$where = apply_filters( "get_{$adjacent}_post_where", $wpdb->prepare("WHERE p.post_date $op %s AND p.post_type = %s AND p.post_status = 'publish' $posts_in_ex_cats_sql", $current_post_date, $post->post_type), $in_same_cat, $excluded_categories );
 	$sort  = apply_filters( "get_{$adjacent}_post_sort", "ORDER BY p.post_date $order LIMIT 1" );
 
-	$query = "SELECT p.* FROM $wpdb->posts AS p $join $where $sort";
+	$query = "SELECT p.id FROM $wpdb->posts AS p $join $where $sort";
 	$query_key = 'adjacent_post_' . md5($query);
 	$result = wp_cache_get($query_key, 'counts');
 	if ( false !== $result ) {
-		if ( is_object( $result ) )
-			$result = new WP_Post( $result );
+		if ( $result )
+			$result = get_post( $result );
 		return $result;
 	}
 
-	$result = $wpdb->get_row("SELECT p.* FROM $wpdb->posts AS p $join $where $sort");
+	$result = $wpdb->get_var( $query );
 	if ( null === $result )
 		$result = '';
 
 	wp_cache_set($query_key, $result, 'counts');
 
-	if ( is_object( $result ) )
-		$result = new WP_Post( $result );
+	if ( $result )
+		$result = get_post( $result );
 
 	return $result;
 }
@@ -1892,15 +1896,19 @@ function home_url( $path = '', $scheme = null ) {
 function get_home_url( $blog_id = null, $path = '', $scheme = null ) {
 	$orig_scheme = $scheme;
 
-	if ( ! in_array( $scheme, array( 'http', 'https', 'relative' ) ) )
-		$scheme = is_ssl() && !is_admin() ? 'https' : 'http';
-
 	if ( empty( $blog_id ) || !is_multisite() ) {
 		$url = get_option( 'home' );
 	} else {
 		switch_to_blog( $blog_id );
 		$url = get_option( 'home' );
 		restore_current_blog();
+	}
+
+	if ( ! in_array( $scheme, array( 'http', 'https', 'relative' ) ) ) {
+		if ( is_ssl() && ! is_admin() )
+			$scheme = 'https';
+		else
+			$scheme = parse_url( $url, PHP_URL_SCHEME );
 	}
 
 	$url = set_url_scheme( $url, $scheme );
@@ -2057,7 +2065,7 @@ function plugins_url($path = '', $plugin = '') {
 	else
 		$url = WP_PLUGIN_URL;
 
-	
+
 	$url = set_url_scheme( $url );
 
 	if ( !empty($plugin) && is_string($plugin) ) {

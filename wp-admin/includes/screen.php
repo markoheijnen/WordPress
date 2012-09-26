@@ -96,7 +96,7 @@ function get_hidden_meta_boxes( $screen ) {
 	if ( $use_defaults ) {
 		$hidden = array();
 		if ( 'post' == $screen->base ) {
-			if ( 'post' == $screen->post_type || 'page' == $screen->post_type )
+			if ( 'post' == $screen->post_type || 'page' == $screen->post_type || 'attachment' == $screen->post_type )
 				$hidden = array('slugdiv', 'trackbacksdiv', 'postcustom', 'postexcerpt', 'commentstatusdiv', 'commentsdiv', 'authordiv', 'revisionsdiv');
 			else
 				$hidden = array( 'slugdiv' );
@@ -496,6 +496,13 @@ final class WP_Screen {
 			case 'edit-tags' :
 				if ( null === $taxonomy )
 					$taxonomy = 'post_tag';
+				// The edit-tags ID does not contain the post type. Look for it in the request.
+				if ( null === $post_type ) {
+					$post_type = 'post';
+					if ( isset( $_REQUEST['post_type'] ) && post_type_exists( $_REQUEST['post_type'] ) )
+						$post_type = $_REQUEST['post_type'];
+				}
+
 				$id = 'edit-' . $taxonomy;
 				break;
 		}

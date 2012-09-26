@@ -429,7 +429,8 @@ function wp_admin_bar_edit_menu( $wp_admin_bar ) {
 			&& 'add' != $current_screen->action
 			&& ( $post_type_object = get_post_type_object( $post->post_type ) )
 			&& current_user_can( $post_type_object->cap->read_post, $post->ID )
-			&& ( $post_type_object->public ) )
+			&& ( $post_type_object->public )
+			&& ( $post_type_object->show_in_admin_bar ) )
 		{
 			$wp_admin_bar->add_menu( array(
 				'id' => 'view',
@@ -456,7 +457,7 @@ function wp_admin_bar_edit_menu( $wp_admin_bar ) {
 		if ( ! empty( $current_object->post_type )
 			&& ( $post_type_object = get_post_type_object( $current_object->post_type ) )
 			&& current_user_can( $post_type_object->cap->edit_post, $current_object->ID )
-			&& ( $post_type_object->show_ui || 'attachment' == $current_object->post_type ) )
+			&& $post_type_object->show_ui && $post_type_object->show_in_admin_bar )
 		{
 			$wp_admin_bar->add_menu( array(
 				'id' => 'edit',
@@ -487,21 +488,19 @@ function wp_admin_bar_new_content_menu( $wp_admin_bar ) {
 
 	$cpts = (array) get_post_types( array( 'show_in_admin_bar' => true ), 'objects' );
 
-	if ( isset( $cpts['post'] ) && current_user_can( $cpts['post']->cap->edit_posts ) ) {
+	if ( isset( $cpts['post'] ) && current_user_can( $cpts['post']->cap->edit_posts ) )
 		$actions[ 'post-new.php' ] = array( $cpts['post']->labels->name_admin_bar, 'new-post' );
-		unset( $cpts['post'] );
-	}
 
-	if ( current_user_can( 'upload_files' ) )
-		$actions[ 'media-new.php' ] = array( _x( 'Media', 'add new from admin bar' ), 'new-media' );
+	if ( isset( $cpts['attachment'] ) && current_user_can( 'upload_files' ) )
+		$actions[ 'media-new.php' ] = array( $cpts['attachment']->labels->name_admin_bar, 'new-media' );
 
 	if ( current_user_can( 'manage_links' ) )
 		$actions[ 'link-add.php' ] = array( _x( 'Link', 'add new from admin bar' ), 'new-link' );
 
-	if ( isset( $cpts['page'] ) && current_user_can( $cpts['page']->cap->edit_posts ) ) {
+	if ( isset( $cpts['page'] ) && current_user_can( $cpts['page']->cap->edit_posts ) )
 		$actions[ 'post-new.php?post_type=page' ] = array( $cpts['page']->labels->name_admin_bar, 'new-page' );
-		unset( $cpts['page'] );
-	}
+
+	unset( $cpts['post'], $cpts['page'], $cpts['attachment'] );
 
 	// Add any additional custom post types.
 	foreach ( $cpts as $cpt ) {
