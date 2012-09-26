@@ -169,15 +169,14 @@ abstract class WP_Image_Editor {
 		}
 
 		if ( $filename ) {
+			$ext = '';
 			$info = pathinfo( $filename );
 			$dir  = $info['dirname'];
 
 			if( isset( $info['extension'] ) )
-				$ext = '.' . $info['extension'];
-			else 
-				$ext = '';
+				$ext = $info['extension'];
 
-			$filename = trailingslashit( $dir ) . wp_basename( $filename, $ext ) . ".{$new_ext}";
+			$filename = trailingslashit( $dir ) . wp_basename( $filename, ".$ext" ) . ".{$new_ext}";
 		}
 
 		return array( $filename, $new_ext, $mime_type );
