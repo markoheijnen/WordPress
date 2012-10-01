@@ -1,5 +1,16 @@
 <?php
+/**
+ * Base WordPress Image Editor
+ *
+ * @package WordPress
+ * @subpackage Image_Editor
+ */
 
+/**
+ * Base WordPress Image Editor class for which Editor implementations extend
+ *
+ * @since 3.5.0
+ */
 abstract class WP_Image_Editor {
 	protected $file = null;
 	protected $size = null;
