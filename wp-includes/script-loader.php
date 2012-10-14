@@ -328,15 +328,18 @@ function wp_default_scripts( &$scripts ) {
 		'addToGallery'          => __( 'Add to gallery' ),
 
 		// Gallery
-		'returnToLibrary'       => __( 'Return to media library' ),
-		'insertGalleryIntoPost' => __( 'Insert gallery into post' ),
-		'addImagesFromLibrary'  => __( 'Add images from media library' ),
+		'returnToLibrary'        => __( 'Return to media library' ),
+		'continueEditingGallery' => __( 'Continue editing gallery' ),
+		'insertGalleryIntoPost'  => __( 'Insert gallery into post' ),
+		'updateGallery'          => __( 'Update gallery' ),
+		'addImagesFromLibrary'   => __( 'Add images from media library' ),
 	) );
 
 	$scripts->add( 'shortcode', "/wp-includes/js/shortcode$suffix.js", array( 'underscore' ), false, 1 );
 	$scripts->add( 'mce-view', "/wp-includes/js/mce-view$suffix.js", array( 'shortcode', 'media-models' ), false, 1 );
 	did_action( 'init' ) && $scripts->localize( 'mce-view', '_wpMceViewL10n', array(
 		'contentWidth' => isset( $GLOBALS['content_width'] ) ? $GLOBALS['content_width'] : 800,
+		'editGallery'  => __( 'Edit Gallery' ),
 	) );
 
 	if ( is_admin() ) {
@@ -369,10 +372,14 @@ function wp_default_scripts( &$scripts ) {
 
 		$scripts->add( 'postbox', "/wp-admin/js/postbox$suffix.js", array('jquery-ui-sortable'), false, 1 );
 
-		$scripts->add( 'post', "/wp-admin/js/post$suffix.js", array('suggest', 'wp-lists', 'postbox'), false, 1 );
-		did_action( 'init' ) && $scripts->localize( 'post', 'postL10n', array(
+		$scripts->add( 'sample-permalink', "/wp-admin/js/sample-permalink$suffix.js", array(), false, 1 );
+		did_action( 'init' ) && $scripts->localize( 'sample-permalink', 'samplePermalinkL10n', array(
 			'ok' => __('OK'),
 			'cancel' => __('Cancel'),
+		) );
+
+		$scripts->add( 'post', "/wp-admin/js/post$suffix.js", array('suggest', 'wp-lists', 'postbox', 'sample-permalink' ), false, 1 );
+		did_action( 'init' ) && $scripts->localize( 'post', 'postL10n', array(
 			'publishOn' => __('Publish on:'),
 			'publishOnFuture' =>  __('Schedule for:'),
 			'publishOnPast' => __('Published on:'),

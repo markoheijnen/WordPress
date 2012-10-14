@@ -1,6 +1,5 @@
 // Ensure the global `wp` object exists.
-if ( typeof wp === 'undefined' )
-	var wp = {};
+window.wp = window.wp || {};
 
 // HTML utility functions
 // ----------------------
@@ -117,7 +116,7 @@ if ( typeof wp === 'undefined' )
 			shortcode: {
 				view: Backbone.View,
 				text: function( instance ) {
-					return instance.options.shortcode.text();
+					return instance.options.shortcode.string();
 				},
 
 				toView: function( content ) {
@@ -326,7 +325,7 @@ if ( typeof wp === 'undefined' )
 				// Empty the wrapper, attach the view element to the wrapper,
 				// and add an ending marker to the wrapper to help regexes
 				// scan the HTML string.
-				wrapper.empty().append( view.el ).append('<span data-wp-view-end></span>');
+				wrapper.empty().append( view.el ).append('<span data-wp-view-end class="wp-view-end"></span>');
 			});
 		},
 
@@ -334,7 +333,7 @@ if ( typeof wp === 'undefined' )
 		// Scans an HTML `content` string and replaces any view instances with
 		// their respective text representations.
 		toText: function( content ) {
-			return content.replace( /<(?:div|span)[^>]+data-wp-view="([^"]+)"[^>]*>.*?<span data-wp-view-end[^>]*><\/span><\/(?:div|span)>/g, function( match, id ) {
+			return content.replace( /<(?:div|span)[^>]+data-wp-view="([^"]+)"[^>]*>.*?<span[^>]+data-wp-view-end[^>]*><\/span><\/(?:div|span)>/g, function( match, id ) {
 				var instance = instances[ id ],
 					view;
 
@@ -388,12 +387,14 @@ if ( typeof wp === 'undefined' )
 		classes = img['class'] ? img['class'].split(/\s+/) : [];
 		size    = attachment.sizes ? attachment.sizes[ props.size ] : {};
 
-		if ( ! size )
+		if ( ! size ) {
 			delete props.size;
+			size = attachment;
+		}
 
-		img.width  = size.width  || attachment.width;
-		img.height = size.height || attachment.height;
-		img.src    = size.url    || attachment.url;
+		img.width  = size.width;
+		img.height = size.height;
+		img.src    = size.url;
 
 		// Update `img` classes.
 		if ( props.align )
@@ -500,6 +501,143 @@ if ( typeof wp === 'undefined' )
 					_.extend( options, _.pick( attachment.sizes[ this.size ], 'url', 'width', 'height' ) );
 
 				this.$el.html( this.template( options ) );
+			}
+		}
+	});
+
+	mceview.add( 'gallery', {
+		shortcode: 'gallery',
+
+		gallery: (function() {
+			var galleries = {};
+
+			return {
+				attachments: function( shortcode, parent ) {
+					var shortcodeString = shortcode.string(),
+						result = galleries[ shortcodeString ],
+						attrs, args;
+
+					delete galleries[ shortcodeString ];
+
+					if ( result )
+						return result;
+
+					attrs = shortcode.attrs.named;
+					args  = _.pick( attrs, 'orderby', 'order' );
+
+					args.type    = 'image';
+					args.perPage = -1;
+
+					// Map the `ids` param to the correct query args.
+					if ( attrs.ids ) {
+						args.post__in = attrs.ids.split(',');
+						args.orderby  = 'post__in';
+					} else if ( attrs.include ) {
+						args.post__in = attrs.include.split(',');
+					}
+
+					if ( attrs.exclude )
+						args.post__not_in = attrs.exclude.split(',');
+
+					if ( ! args.post__in )
+						args.parent = attrs.id || parent;
+
+					return media.query( args );
+				},
+
+				shortcode: function( attachments ) {
+					var props = attachments.props.toJSON(),
+						attrs = _.pick( props, 'include', 'exclude', 'orderby', 'order' ),
+						shortcode;
+
+					attrs.ids = attachments.pluck('id');
+
+					shortcode = new wp.shortcode({
+						tag:    'gallery',
+						attrs:  attrs,
+						type:   'single'
+					});
+
+					// Use a cloned version of the gallery.
+					galleries[ shortcode.string() ] = new wp.media.model.Attachments( attachments.models, {
+						props: props
+					});
+
+					return shortcode;
+				}
+			};
+		}()),
+
+		view: {
+			className: 'editor-gallery',
+			template:  media.template('editor-gallery'),
+
+			// The fallback post ID to use as a parent for galleries that don't
+			// specify the `ids` or `include` parameters.
+			//
+			// Uses the hidden input on the edit posts page by default.
+			parent: $('#post_ID').val(),
+
+			events: {
+				'click .close': 'remove',
+				'click .edit':  'edit'
+			},
+
+			initialize: function() {
+				this.update();
+			},
+
+			update: function() {
+				var	view = mceview.get('gallery');
+
+				this.attachments = view.gallery.attachments( this.options.shortcode, this.parent );
+				this.attachments.more().done( _.bind( this.render, this ) );
+			},
+
+			render: function() {
+				var options, thumbnail, size;
+
+				if ( ! this.attachments.length )
+					return;
+
+				thumbnail = this.attachments.first().toJSON();
+				size = thumbnail.sizes && thumbnail.sizes.thumbnail ? thumbnail.sizes.thumbnail : thumbnail;
+
+				options = {
+					url:         size.url,
+					orientation: size.orientation,
+					count:       this.attachments.length
+				};
+
+				this.$el.html( this.template( options ) );
+			},
+
+			edit: function() {
+				if ( ! wp.media.view || this.workflow )
+					return;
+
+				this.workflow = wp.media({
+					view:      'gallery',
+					selection: this.attachments.models,
+					title:     mceview.l10n.editGallery,
+					editing:   true,
+					multiple:  true
+				});
+
+				// Create a single-use workflow. If the workflow is closed,
+				// then detach it from the DOM and remove the reference.
+				this.workflow.on( 'close', function() {
+					this.workflow.detach();
+					delete this.workflow;
+				}, this );
+
+				// Update the `shortcode` and `attachments`.
+				this.workflow.on( 'update:gallery', function( selection ) {
+					var	view = mceview.get('gallery');
+
+					this.options.shortcode = view.gallery.shortcode( selection );
+					this.update();
+				}, this );
 			}
 		}
 	});
