@@ -389,7 +389,6 @@ function get_post( $post = null, $output = OBJECT, $filter = 'raw' ) {
 	} elseif ( is_object( $post ) ) {
 		if ( empty( $post->filter ) ) {
 			$_post = sanitize_post( $post, 'raw' );
-			wp_cache_add( $post->ID, $_post, 'posts' );
 			$_post = new WP_Post( $_post );
 		} elseif ( 'raw' == $post->filter ) {
 			$_post = new WP_Post( $post );
@@ -418,33 +417,151 @@ function get_post( $post = null, $output = OBJECT, $filter = 'raw' ) {
  *
  * @since 3.5.0
  *
- * @property $ID;
- * @property $post_author;
- * @property $post_date;
- * @property $post_date_gmt;
- * @property $post_content;
- * @property $post_title;
- * @property $post_excerpt;
- * @property $post_status;
- * @property $comment_status;
- * @property $ping_status;
- * @property $post_password;
- * @property $post_name;
- * @property $to_ping;
- * @property $pinged;
- * @property $post_modified;
- * @property $post_modified_gmt;
- * @property $post_content_filtered;
- * @property $post_parent;
- * @property $guid;
- * @property $menu_order;
- * @property $post_type;
- * @property $post_mime_type;
- * @property $comment_count;
- * @property $ancestors;
  */
 final class WP_Post {
 
+	/**
+	 *
+	 * @var int
+	 */
+	public $ID;
+
+	/**
+	 *
+	 * @var int
+	 */	
+	public $post_author = 0;
+
+	/**
+	 *
+	 * @var string
+	 */	
+	public $post_date = '0000-00-00 00:00:00';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_date_gmt = '0000-00-00 00:00:00';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_content = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_title = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_excerpt = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_status = 'publish';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $comment_status = 'open';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $ping_status = 'open';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_password = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_name = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $to_ping = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $pinged = '';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_modified = '0000-00-00 00:00:00';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_modified_gmt = '0000-00-00 00:00:00';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_content_filtered = '';
+
+	/**
+	 *
+	 * @var int
+	 */		
+	public $post_parent = 0;
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $guid = '';
+
+	/**
+	 *
+	 * @var int
+	 */	
+	public $menu_order = 0;
+
+	/**
+	 *
+	 * @var string
+	 */	
+	public $post_type = 'post';
+
+	/**
+	 *
+	 * @var string
+	 */		
+	public $post_mime_type = '';
+
+	/**
+	 *
+	 * @var int
+	 */	
+	public $comment_count = 0;
+
+	/**
+	 *
+	 * @var string
+	 */			
 	public $filter;
 
 	public static function get_instance( $post_id ) {
@@ -455,9 +572,7 @@ final class WP_Post {
 			return false;
 
 		if ( ! $_post = wp_cache_get( $post_id, 'posts' ) ) {
-			$_post = $wpdb->get_row( $wpdb->prepare( "
-				SELECT * FROM $wpdb->posts WHERE ID = %d LIMIT 1
-			", $post_id ) );
+			$_post = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->posts WHERE ID = %d LIMIT 1", $post_id ) );
 
 			if ( ! $_post )
 				return false;
@@ -2865,7 +2980,7 @@ function wp_update_post( $postarr = array(), $wp_error = false ) {
  * Publish a post by transitioning the post status.
  *
  * @since 2.1.0
- * @uses wp_insert_post()
+ * @uses wp_update_post()
  *
  * @param mixed $post Post ID or object.
  */
@@ -2876,7 +2991,7 @@ function wp_publish_post( $post ) {
 		return;
 
 	$post->post_status = 'publish';
-	wp_insert_post( $post );
+	wp_update_post( $post );
 }
 
 /**
@@ -2953,6 +3068,8 @@ function wp_unique_post_slug( $slug, $post_ID, $post_status, $post_type, $post_p
 			$slug = $alt_post_name;
 		}
 	} elseif ( in_array( $post_type, $hierarchical_post_types ) ) {
+		if ( 'nav_menu_item' == $post_type )
+			return $slug;
 		// Page slugs must be unique within their own trees. Pages are in a separate
 		// namespace than posts so page slugs are allowed to overlap post slugs.
 		$check_sql = "SELECT post_name FROM $wpdb->posts WHERE post_name = %s AND post_type IN ( '" . implode( "', '", esc_sql( $hierarchical_post_types ) ) . "' ) AND ID != %d AND post_parent = %d LIMIT 1";

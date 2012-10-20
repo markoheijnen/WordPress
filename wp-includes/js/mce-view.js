@@ -281,7 +281,7 @@ window.wp = window.wp || {};
 
 		toView: function( viewType, options ) {
 			var view = wp.mce.view.get( viewType ),
-				instance, id, tag;
+				instance, id;
 
 			if ( ! view )
 				return '';
@@ -296,10 +296,20 @@ window.wp = window.wp || {};
 			id = instance.el.id = instance.el.id || _.uniqueId('__wpmce-');
 			instances[ id ] = instance;
 
-			// If the view is a span, wrap it in a span.
-			tag = 'span' === instance.tagName ? 'span' : 'div';
+			// Create a dummy `$wrapper` property to allow `$wrapper` to be
+			// called in the view's `render` method without a conditional.
+			instance.$wrapper = $();
 
-			return '<' + tag + ' class="wp-view-wrap" data-wp-view="' + id + '" contenteditable="false"></' + tag + '>';
+			return wp.html.string({
+				// If the view is a span, wrap it in a span.
+				tag: 'span' === instance.tagName ? 'span' : 'div',
+
+				attrs: {
+					'class':           'wp-view-wrap wp-view-type-' + viewType,
+					'data-wp-view':    id,
+					'contenteditable': false
+				}
+			});
 		},
 
 		// ### render( scope )
@@ -311,12 +321,13 @@ window.wp = window.wp || {};
 		render: function( scope ) {
 			$( '.wp-view-wrap', scope ).each( function() {
 				var wrapper = $(this),
-					id = wrapper.data('wp-view'),
-					view = instances[ id ];
+					view = wp.mce.view.instance( this );
 
 				if ( ! view )
 					return;
 
+				// Link the real wrapper to the view.
+				view.$wrapper = wrapper;
 				// Render the view.
 				view.render();
 				// Detach the view element to ensure events are not unbound.
@@ -359,6 +370,47 @@ window.wp = window.wp || {};
 			return wp.mce.view.removeInternalAttrs( wp.html.attrs( content ) );
 		},
 
+		// ### instance( scope )
+		//
+		// Accepts a MCE view wrapper `node` (i.e. a node with the
+		// `wp-view-wrap` class).
+		instance: function( node ) {
+			var id = $( node ).data('wp-view');
+
+			if ( id )
+				return instances[ id ];
+		},
+
+		// ### Select a view.
+		//
+		// Accepts a MCE view wrapper `node` (i.e. a node with the
+		// `wp-view-wrap` class).
+		select: function( node ) {
+			var $node = $(node);
+
+			// Bail if node is already selected.
+			if ( $node.hasClass('selected') )
+				return;
+
+			$node.addClass('selected');
+			$( node.firstChild ).trigger('select');
+		},
+
+		// ### Deselect a view.
+		//
+		// Accepts a MCE view wrapper `node` (i.e. a node with the
+		// `wp-view-wrap` class).
+		deselect: function( node ) {
+			var $node = $(node);
+
+			// Bail if node is already selected.
+			if ( ! $node.hasClass('selected') )
+				return;
+
+			$node.removeClass('selected');
+			$( node.firstChild ).trigger('deselect');
+		},
+
 		// Link any localized strings.
 		l10n: _.isUndefined( _wpMceViewL10n ) ? {} : _wpMceViewL10n
 	};
@@ -371,6 +423,24 @@ window.wp = window.wp || {};
 	var mceview = wp.mce.view;
 
 	wp.media.string = {};
+
+	wp.media.string.link = function( attachment ) {
+		var linkTo  = getUserSetting( 'urlbutton', 'post' ),
+			options = {
+				tag:     'a',
+				content: attachment.get('title') || attachment.get('filename'),
+				attrs:   {
+					rel: 'attachment wp-att-' + attachment.id
+				}
+			};
+
+		// Attachments can be linked to attachment post pages or to the direct
+		// URL. `none` is not a valid option.
+		options.attrs.href = ( linkTo === 'file' ) ? attachment.get('url') : attachment.get('link');
+
+		return wp.html.string( options );
+	};
+
 	wp.media.string.image = function( attachment, props ) {
 		var classes, img, options, size;
 
@@ -485,6 +555,11 @@ window.wp = window.wp || {};
 				if ( ! attachment.url )
 					return;
 
+				// Align the wrapper.
+				if ( this.align )
+					this.$wrapper.addClass( 'align' + this.align );
+
+				// Generate the template options.
 				options = {
 					url: 'image' === attachment.type ? attachment.url : attachment.icon,
 					uploading: attachment.uploading
@@ -621,7 +696,8 @@ window.wp = window.wp || {};
 					selection: this.attachments.models,
 					title:     mceview.l10n.editGallery,
 					editing:   true,
-					multiple:  true
+					multiple:  true,
+					describe:  true
 				});
 
 				// Create a single-use workflow. If the workflow is closed,

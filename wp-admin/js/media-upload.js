@@ -104,13 +104,17 @@ var tb_position;
 
 			workflow = workflows[ id ] = wp.media( _.defaults( options || {}, {
 				title:    wp.media.view.l10n.insertMedia,
-				multiple: true
+				multiple: true,
+				describe: true
 			} ) );
 
 			workflow.on( 'update:insert', function( selection ) {
-				this.insert( '\n' + selection.map( function( attachment ) {
-					return wp.media.string.image( attachment );
-				}).join('\n\n') + '\n' );
+				this.insert( selection.map( function( attachment ) {
+					if ( 'image' === attachment.get('type') )
+						return wp.media.string.image( attachment ) + ' ';
+					else
+						return wp.media.string.link( attachment ) + ' ';
+				}).join('') );
 			}, this );
 
 			workflow.on( 'update:gallery', function( selection ) {

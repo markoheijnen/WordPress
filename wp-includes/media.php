@@ -383,7 +383,7 @@ function image_make_intermediate_size( $file, $width, $height, $crop = false ) {
 	if ( $width || $height ) {
 		$editor = WP_Image_Editor::get_instance( $file );
 
-		if ( is_wp_error( $editor ) || is_wp_error( $editor->resize( $width, $height, $crop ) ) );
+		if ( is_wp_error( $editor ) || is_wp_error( $editor->resize( $width, $height, $crop ) ) )
 			return false;
 
 		$resized_file = $editor->save();
@@ -1246,6 +1246,7 @@ function wp_prepare_attachment_for_js( $attachment ) {
 		'title'       => $attachment->post_title,
 		'filename'    => basename( $attachment->guid ),
 		'url'         => $attachment_url,
+		'link'        => get_attachment_link( $attachment->ID ),
 		'alt'         => get_post_meta( $attachment->ID, '_wp_attachment_image_alt', true ),
 		'author'      => $attachment->post_author,
 		'description' => $attachment->post_content,
@@ -1328,23 +1329,39 @@ function wp_print_media_templates( $attachment ) {
 
 	<script type="text/html" id="tmpl-attachment">
 		<div class="attachment-preview type-<%- type %> subtype-<%- subtype %> <%- orientation %>">
-			<% if ( 'image' === type ) { %>
+			<% if ( uploading ) { %>
+				<div class="media-progress-bar"><div></div></div>
+			<% } else if ( 'image' === type ) { %>
 				<div class="thumbnail">
 					<img src="<%- url %>" width="<%- width %>" height="<%- height %>" draggable="false"
 					style="top:<%- top %>px; left:<%- left %>px;" />
 				</div>
-			<% } else if ( uploading ) { %>
-				<div class="media-progress-bar"><div></div></div>
 			<% } else { %>
 				<img src="<%- icon %>" class="icon" draggable="false" />
 				<div class="filename"><%- filename %></div>
 			<% } %>
 
 			<% if ( buttons.close ) { %>
-				<a class="close" href="#">&times;</a>
+				<a class="close button" href="#">&times;</a>
 			<% } %>
 		</div>
-		<div class="describe"></div>
+		<% if ( describe ) { %>
+			<% if ( 'image' === type ) { %>
+				<textarea class="describe"
+					placeholder="<?php esc_attr_e('Describe this image&hellip;'); ?>"
+					><%- caption %></textarea>
+			<% } else { %>
+				<textarea class="describe"
+					<% if ( 'video' === type ) { %>
+						placeholder="<?php esc_attr_e('Describe this video&hellip;'); ?>"
+					<% } else if ( 'audio' === type ) { %>
+						placeholder="<?php esc_attr_e('Describe this audio file&hellip;'); ?>"
+					<% } else { %>
+						placeholder="<?php esc_attr_e('Describe this media file&hellip;'); ?>"
+					<% } %>
+					><%- title %></textarea>
+			<% } %>
+		<% } %>
 	</script>
 
 	<script type="text/html" id="tmpl-media-selection-preview">
@@ -1358,6 +1375,37 @@ function wp_print_media_templates( $attachment ) {
 		<% if ( clearable ) { %>
 			<a class="clear-selection" href="#"><?php _e('Clear selection'); ?></a>
 		<% } %>
+	</script>
+
+	<script type="text/html" id="tmpl-attachment-display-settings">
+		<h4><?php _e('Alignment'); ?></h4>
+		<div class="alignment button-group button-large" data-setting="align">
+			<button class="button" value="left">
+				<?php esc_attr_e('Left'); ?>
+			</button>
+			<button class="button" value="center">
+				<?php esc_attr_e('Center'); ?>
+			</button>
+			<button class="button" value="right">
+				<?php esc_attr_e('Right'); ?>
+			</button>
+			<button class="button" value="none">
+				<?php esc_attr_e('None'); ?>
+			</button>
+		</div>
+
+		<h4><?php _e('Link To'); ?></h4>
+		<div class="link-to button-group button-large" data-setting="link">
+			<button class="button" value="post">
+				<?php esc_attr_e('Attachment Page'); ?>
+			</button>
+			<button class="button" value="file">
+				<?php esc_attr_e('Media File'); ?>
+			</button>
+			<button class="button" value="none">
+				<?php esc_attr_e('None'); ?>
+			</button>
+		</div>
 	</script>
 
 	<script type="text/html" id="tmpl-editor-attachment">

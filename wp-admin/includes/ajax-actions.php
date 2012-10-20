@@ -1820,3 +1820,35 @@ function wp_ajax_query_attachments() {
 
 	wp_send_json_success( $posts );
 }
+
+/**
+ * Save attachment attributes.
+ *
+ * @since 3.5.0
+ */
+function wp_ajax_save_attachment() {
+	if ( ! isset( $_REQUEST['id'] ) || ! isset( $_REQUEST['changes'] ) )
+		wp_send_json_error();
+
+	if ( ! $id = absint( $_REQUEST['id'] ) )
+		wp_send_json_error();
+
+	check_ajax_referer( 'save-attachment', 'nonce' );
+
+	if ( ! current_user_can( 'edit_post', $id ) )
+		wp_send_json_error();
+
+	$changes = $_REQUEST['changes'];
+	$args    = array();
+
+	if ( ! empty( $changes['title'] ) )
+		$args['post_title'] = $changes['title'];
+
+	if ( ! empty( $changes['caption'] ) )
+		$args['post_excerpt'] = $changes['caption'];
+
+	if ( $args )
+		wp_update_post( array_merge( $args, array( 'ID' => $id ) ) );
+
+	wp_send_json_success();
+}

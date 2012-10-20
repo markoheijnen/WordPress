@@ -2725,7 +2725,7 @@ class WP_Query {
 			}
 
 			if ( $this->is_preview && $this->posts && current_user_can( $edit_cap, $this->posts[0]->ID ) )
-				$this->posts[0] = apply_filters_ref_array('the_preview', array( $this->posts[0], &$this ));
+				$this->posts[0] = get_post( apply_filters_ref_array( 'the_preview', array( $this->posts[0], &$this ) ) );
 		}
 
 		// Put sticky posts at the top of the posts array
@@ -2774,10 +2774,10 @@ class WP_Query {
 
 		$this->post_count = count( $this->posts );
 
-		// Always sanitize
-		foreach ( $this->posts as $i => $post ) {
-			$this->posts[$i] = sanitize_post( $post, 'raw' );
-		}
+		// Ensure that any posts added/modified via one of the filters above are
+		// of the type WP_Post and are filtered.
+		if ( $this->posts )
+			$this->posts = array_map( 'get_post', $this->posts );
 
 		if ( $q['cache_results'] )
 			update_post_caches($this->posts, $post_type, $q['update_post_term_cache'], $q['update_post_meta_cache']);
@@ -2799,7 +2799,9 @@ class WP_Query {
 	function set_found_posts( $q, $limits ) {
 		global $wpdb;
 
-		if ( $q['no_found_rows'] || ! $this->posts )
+		// Bail if posts is an empty array. Continue if posts is an empty string
+		// null, or false to accommodate caching plugins that fill posts later.
+		if ( $q['no_found_rows'] || ( is_array( $this->posts ) && ! $this->posts ) )
 			return;
 
 		if ( ! empty( $limits ) )

@@ -97,9 +97,8 @@ function wp_generate_attachment_metadata( $attachment_id, $file ) {
 
 		$editor = WP_Image_Editor::get_instance( $file );
 
-		if( ! is_wp_error( $editor ) ) {
+		if ( ! is_wp_error( $editor ) )
 			$metadata['sizes'] = $editor->multi_resize( $sizes );
-		}
 
 		// fetch additional metadata from exif/iptc
 		$image_meta = wp_read_image_metadata( $file );

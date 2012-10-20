@@ -1,7 +1,7 @@
 window.wp = window.wp || {};
 
 (function($){
-	var Attachment, Attachments, Query, compare;
+	var Attachment, Attachments, Query, compare, l10n;
 
 	/**
 	 * wp.media( attributes )
@@ -19,6 +19,9 @@ window.wp = window.wp || {};
 	};
 
 	_.extend( media, { model: {}, view: {}, controller: {} });
+
+	// Link any localized strings.
+	l10n = media.model.l10n = _.isUndefined( _wpMediaModelsL10n ) ? {} : _wpMediaModelsL10n;
 
 	/**
 	 * ========================================================================
@@ -174,7 +177,7 @@ window.wp = window.wp || {};
 	 */
 	Attachment = media.model.Attachment = Backbone.Model.extend({
 		sync: function( method, model, options ) {
-			// Overload the read method so Attachment.fetch() functions correctly.
+			// Overload the `read` request so Attachment.fetch() functions correctly.
 			if ( 'read' === method ) {
 				options = options || {};
 				options.context = this;
@@ -184,13 +187,36 @@ window.wp = window.wp || {};
 				});
 				return media.ajax( options );
 
-			// Otherwise, fall back to Backbone.sync()
-			} else {
-				return Backbone.sync.apply( this, arguments );
+			// Overload the `update` request so properties can be saved.
+			} else if ( 'update' === method ) {
+				options = options || {};
+				options.context = this;
+
+				// Set the action and ID.
+				options.data = _.extend( options.data || {}, {
+					action: 'save-attachment',
+					id:     this.id,
+					nonce:  l10n.saveAttachmentNonce
+				});
+
+				// Record the values of the changed attributes.
+				if ( options.changes ) {
+					_.each( options.changes, function( value, key ) {
+						options.changes[ key ] = this.get( key );
+					}, this );
+
+					options.data.changes = options.changes;
+					delete options.changes;
+				}
+
+				return media.ajax( options );
 			}
 		},
 
 		parse: function( resp, xhr ) {
+			if ( ! resp )
+				return resp;
+
 			// Convert date strings into Date objects.
 			resp.date = new Date( resp.date );
 			resp.modified = new Date( resp.modified );
