@@ -33,7 +33,7 @@ abstract class WP_Image_Editor {
 	 * @return WP_Image_Editor|WP_Error|boolean
 	 */
 	public final static function get_instance( $path = null ) {
-		$implementation = apply_filters( 'image_editor_class', self::choose_implementation(), $path );
+		$implementation = apply_filters( 'wp_image_editor_class', self::choose_implementation(), $path );
 
 		if ( $implementation ) {
 			$editor = new $implementation( $path );
@@ -59,17 +59,15 @@ abstract class WP_Image_Editor {
 	private final static function choose_implementation() {
 
 		if ( null === self::$implementation ) {
-			$request_order = apply_filters( 'wp_editors', array( 'imagick', 'gd' ) );
+			$request_order = apply_filters( 'wp_image_editors', array( 'WP_Image_Editor_imagick', 'WP_Image_Editor_gd' ) );
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
 			foreach ( $request_order as $editor ) {
-				$class = 'WP_Image_Editor_' . $editor;
-
 				// Check to see if this editor is a possibility, calls the editor statically
-				if ( ! call_user_func( array( $class, 'test' ) ) )
+				if ( ! call_user_func( array( $editor, 'test' ) ) )
 					continue;
 
-				self::$implementation = $class;
+				self::$implementation = $editor;
 				break;
 			}
 		}
