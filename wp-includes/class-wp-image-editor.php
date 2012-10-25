@@ -59,7 +59,7 @@ abstract class WP_Image_Editor {
 	private final static function choose_implementation() {
 
 		if ( null === self::$implementation ) {
-			$request_order = apply_filters( 'wp_image_editors', array( 'WP_Image_Editor_imagick', 'WP_Image_Editor_gd' ) );
+			$request_order = apply_filters( 'wp_image_editors', array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
 			foreach ( $request_order as $editor ) {
