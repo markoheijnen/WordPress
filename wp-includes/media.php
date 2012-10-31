@@ -1299,32 +1299,26 @@ function wp_print_media_templates( $attachment ) {
 		<div class="media-modal">
 			<h3 class="media-modal-title"><%- title %></h3>
 			<a class="media-modal-close" href="" title="<?php esc_attr_e('Close'); ?>">&times;</a>
-			<div class="media-modal-content"></div>
 		</div>
 		<div class="media-modal-backdrop"></div>
 	</script>
 
-	<script type="text/html" id="tmpl-media-workspace">
-		<div class="upload-attachments">
-			<% if ( selectOne ) { %>
-				<h3><?php _e( 'Drop a file here' ); ?></h3>
-				<span><?php _ex( 'or', 'Uploader: Drop a file here - or - Select a File' ); ?></span>
-				<a href="#" class="button-secondary"><?php _e( 'Select a File' ); ?></a>
-			<% } else { %>
-				<h3><?php _e( 'Drop files here' ); ?></h3>
-				<span><?php _ex( 'or', 'Uploader: Drop files here - or - Select Files' ); ?></span>
-				<a href="#" class="button-secondary"><?php _e( 'Select Files' ); ?></a>
-			<% } %>
-
-			<div class="media-progress-bar"><div></div></div>
+	<script type="text/html" id="tmpl-uploader-window">
+		<div class="uploader-window-content">
+			<h3><?php _e( 'Drop files to upload' ); ?></h3>
 		</div>
 	</script>
 
-	<script type="text/html" id="tmpl-attachments">
-		<div class="attachments-header">
-			<h3><%- directions %></h3>
-			<input class="search" type="text" placeholder="<?php esc_attr_e('Search'); ?>" />
-		</div>
+	<script type="text/html" id="tmpl-uploader-inline">
+		<h3><?php _e( 'Drop files here' ); ?></h3>
+		<!--<span><?php _ex( 'or', 'Uploader: Drop files here - or - Select Files' ); ?></span>-->
+		<a href="#" class="browser button-secondary"><?php _e( 'Select Files' ); ?></a>
+		<div class="media-progress-bar"><div></div></div>
+	</script>
+
+	<script type="text/html" id="tmpl-sidebar">
+		<h2 class="sidebar-title"><%- title %></h2>
+		<div class="sidebar-content"></div>
 	</script>
 
 	<script type="text/html" id="tmpl-attachment">
@@ -1333,8 +1327,7 @@ function wp_print_media_templates( $attachment ) {
 				<div class="media-progress-bar"><div></div></div>
 			<% } else if ( 'image' === type ) { %>
 				<div class="thumbnail">
-					<img src="<%- url %>" width="<%- width %>" height="<%- height %>" draggable="false"
-					style="top:<%- top %>px; left:<%- left %>px;" />
+					<img src="<%- url %>" draggable="false" />
 				</div>
 			<% } else { %>
 				<img src="<%- icon %>" class="icon" draggable="false" />
@@ -1361,6 +1354,39 @@ function wp_print_media_templates( $attachment ) {
 					<% } %>
 					><%- title %></textarea>
 			<% } %>
+		<% } %>
+	</script>
+
+	<script type="text/html" id="tmpl-attachment-details">
+		<div class="attachment-preview attachment-details-preview type-<%- type %> subtype-<%- subtype %> <%- orientation %>">
+			<% if ( uploading ) { %>
+				<div class="media-progress-bar"><div></div></div>
+			<% } else if ( 'image' === type ) { %>
+				<div class="thumbnail">
+					<img src="<%- url %>" draggable="false" />
+				</div>
+			<% } else { %>
+				<div class="icon-thumbnail">
+					<img src="<%- icon %>" class="icon" draggable="false" />
+					<div class="filename"><%- filename %></div>
+				</div>
+			<% } %>
+		</div>
+
+		<% if ( 'image' === type ) { %>
+			<textarea class="describe"
+				placeholder="<?php esc_attr_e('Describe this image&hellip;'); ?>"
+				><%- caption %></textarea>
+		<% } else { %>
+			<textarea class="describe"
+				<% if ( 'video' === type ) { %>
+					placeholder="<?php esc_attr_e('Describe this video&hellip;'); ?>"
+				<% } else if ( 'audio' === type ) { %>
+					placeholder="<?php esc_attr_e('Describe this audio file&hellip;'); ?>"
+				<% } else { %>
+					placeholder="<?php esc_attr_e('Describe this media file&hellip;'); ?>"
+				<% } %>
+				><%- title %></textarea>
 		<% } %>
 	</script>
 
@@ -1433,6 +1459,35 @@ function wp_print_media_templates( $attachment ) {
 			<div class="button close">&times;</div>
 			<div class="button edit"><?php _e('Edit'); ?></div>
 		</div>
+	</script>
+
+	<script type="text/html" id="tmpl-attachments-css">
+		<style type="text/css" id="<%- id %>-css">
+			#<%- id %> {
+				padding: <%- gutter %>px;
+			}
+
+			#<%- id %> .attachment {
+				margin: <%- gutter %>px;
+				width: <%- edge %>px;
+			}
+
+			#<%- id %> .attachment-preview,
+			#<%- id %> .attachment-preview .thumbnail {
+				width: <%- edge %>px;
+				height: <%- edge %>px;
+			}
+
+			#<%- id %> .portrait .thumbnail img {
+				width: <%- edge %>px;
+				height: auto;
+			}
+
+			#<%- id %> .landscape .thumbnail img {
+				width: auto;
+				height: <%- edge %>px;
+			}
+		</style>
 	</script>
 	<?php
 }

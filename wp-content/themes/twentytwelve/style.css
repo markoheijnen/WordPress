@@ -358,9 +358,15 @@ img.wp-smiley,
 .entry-content dl.gallery-item {
 	margin: 0;
 }
+.gallery-item a,
+.gallery-caption {
+	width: 90%;
+}
 .gallery-item a {
 	display: block;
-	width: 90%;
+}
+.gallery-caption a {
+	display: inline;
 }
 .gallery-columns-1 .gallery-item a {
 	max-width: 100%;
@@ -1427,6 +1433,7 @@ img#wpstats {
 		color: #6a6a6a;
 		line-height: 3.692307692;
 		text-transform: uppercase;
+		white-space: nowrap;
 	}
 	.main-navigation li a:hover {
 		color: #000;
@@ -1463,6 +1470,7 @@ img#wpstats {
 		padding: 0.571428571rem 0.714285714rem;
 		width: 180px;
 		width: 12.85714286rem;
+		white-space: normal;
 	}
 	.main-navigation li ul li a:hover {
 		background: #e3e3e3;

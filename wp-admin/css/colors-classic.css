@@ -195,10 +195,6 @@ strong .post-com-count span {
 	background: #f1f1f1;
 }
 
-.wrap .add-new-h2:focus {
-	background: #c7e7fd;
-}
-
 .subtitle {
 	color: #777;
 }
@@ -284,10 +280,9 @@ td.help {
 
 .ui-autocomplete {
 	background-color: #eff8ff;
-	border-color: #d1e5ee;
 }
 
-.ui-autocomplete li a.ui-state-hover {
+.ui-autocomplete li a.ui-state-focus {
 	background-color: #def1ff;
 }
 
@@ -324,17 +319,7 @@ a:active {
 }
 
 a:focus {
-	background: #c7e7fd;
 	color: #124964;
-}
-
-a:active {
-	background: none;
-	outline: thin dotted;
-}
-
-#adminmenu a:active {
-	outline: none;
 }
 
 #adminmenu a:hover,
@@ -791,6 +776,10 @@ table.widefat .spam a:hover,
 	background-color: #d3e9f2;
 	border-color: #d1e5ee #d1e5ee #d3e9f2;
 	color: #888;
+}
+
+.wp-admin .wp-editor-wrap .wp-switch-editor:active {
+	background-color: #f5fafd;
 }
 
 .wp-admin .wp-editor-wrap.tmce-active .switch-tmce,
@@ -1420,11 +1409,6 @@ table.diff .diff-addedline ins {
 	background: transparent url(../images/arrows.png) no-repeat right 4px;
 }
 
-#screen-meta-links a:focus {
-	background-color: #c7e7fd;
-	color: #124964;
-}
-
 #screen-meta-links a:hover,
 #screen-meta-links a:active {
 	color: #000;
@@ -1767,7 +1751,7 @@ div.widgets-sortables,
 	border-bottom-color: #eff8ff;
 }
 
-.item-edit:hover {
+.nav-menus-php .item-edit:hover {
 	background: transparent url(../images/arrows-dark-vs.png) no-repeat 8px 10px;
 }
 
@@ -2031,6 +2015,7 @@ div.widgets-sortables,
 	#adminmenu .wp-has-submenu:hover .wp-menu-toggle,
 	#adminmenu .wp-menu-open .wp-menu-toggle,
 	#collapse-button div,
+	.nav-menus-php .item-edit,
 	.meta-box-sortables .postbox:hover .handlediv,
 	.sidebar-name-arrow,
 	.rtl #adminmenu .wp-has-submenu:hover .wp-menu-toggle,
@@ -2044,6 +2029,7 @@ div.widgets-sortables,
 
 	#adminmenu li.wp-has-current-submenu.wp-menu-open .wp-menu-toggle,
 	#adminmenu li.wp-has-current-submenu:hover .wp-menu-toggle,
+	.nav-menus-php .item-edit:hover,	
 	.sidebar-name:hover .sidebar-name-arrow,
 	.rtl #adminmenu li.wp-has-current-submenu.wp-menu-open .wp-menu-toggle,
 	.rtl #adminmenu li.wp-has-current-submenu:hover .wp-menu-toggle,

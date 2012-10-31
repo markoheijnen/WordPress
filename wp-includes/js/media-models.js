@@ -14,8 +14,8 @@ window.wp = window.wp || {};
 	 * @return {object}            A media workflow.
 	 */
 	media = wp.media = function( attributes ) {
-		if ( media.controller.Workflow )
-			return new media.controller.Workflow( attributes ).attach().render();
+		if ( media.view.Frame )
+			return new media.view.Frame( attributes ).render().attach().open();
 	};
 
 	_.extend( media, { model: {}, view: {}, controller: {} });
@@ -611,6 +611,81 @@ window.wp = window.wp || {};
 				return query;
 			};
 		}())
+	});
+
+	/**
+	 * wp.media.model.Selection
+	 *
+	 * Used to manage a selection of attachments in the views.
+	 */
+	media.model.Selection = Attachments.extend({
+		initialize: function( models, options ) {
+			Attachments.prototype.initialize.apply( this, arguments );
+			this.multiple = options && options.multiple;
+
+			// Refresh the `single` model whenever the selection changes.
+			// Binds `single` instead of using the context argument to ensure
+			// it receives no parameters.
+			this.on( 'add remove reset', _.bind( this.single, this ) );
+		},
+
+		// Override the selection's add method.
+		// If the workflow does not support multiple
+		// selected attachments, reset the selection.
+		add: function( models, options ) {
+			if ( ! this.multiple ) {
+				models = _.isArray( models ) ? _.first( models ) : models;
+				this.clear( options );
+			}
+
+			return Attachments.prototype.add.call( this, models, options );
+		},
+
+		// Removes all models from the selection.
+		clear: function( options ) {
+			this.remove( this.models, options ).single();
+			return this;
+		},
+
+		// Override the selection's reset method.
+		// Always direct items through add and remove,
+		// as we need them to fire.
+		reset: function( models, options ) {
+			this.clear( options ).add( models, options ).single();
+			return this;
+		},
+
+		// Create selection.has, which determines if a model
+		// exists in the collection based on cid and id,
+		// instead of direct comparison.
+		has: function( attachment ) {
+			return !! ( this.getByCid( attachment.cid ) || this.get( attachment.id ) );
+		},
+
+		single: function( model ) {
+			var previous = this._single;
+
+			// If a `model` is provided, use it as the single model.
+			if ( model )
+				this._single = model;
+
+			// If the single model isn't in the selection, remove it.
+			if ( this._single && ! this.has( this._single ) )
+				delete this._single;
+
+			this._single = this._single || this.last();
+
+			// If single has changed, fire an event.
+			if ( this._single !== previous ) {
+				if ( this._single )
+					this._single.trigger( 'selection:single', this._single, this );
+				if ( previous )
+					previous.trigger( 'selection:unsingle', previous, this );
+			}
+
+			// Return the single model, or the last model as a fallback.
+			return this._single;
+		}
 	});
 
 }(jQuery));

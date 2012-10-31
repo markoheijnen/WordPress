@@ -781,7 +781,7 @@ function wpmu_signup_user_notification($user, $user_email, $key, $meta = '') {
 	$message_headers = "From: \"{$from_name}\" <{$admin_email}>\n" . "Content-Type: text/plain; charset=\"" . get_option('blog_charset') . "\"\n";
 	$message = sprintf(
 		apply_filters( 'wpmu_signup_user_notification_email',
-			__( "To activate your user, please click the following link:\n\n%s\n\nAfter you activate, you will receive *another email* with your login.\n\n" ),
+			__( "To activate your user, please click the following link:\n\n%s\n\nAfter you activate, you will receive *another email* with your login." ),
 			$user, $user_email, $key, $meta
 		),
 		site_url( "wp-activate.php?key=$key" )
@@ -1015,11 +1015,11 @@ function newblog_notify_siteadmin( $blog_id, $deprecated = '' ) {
 	$siteurl = site_url();
 	restore_current_blog();
 
-	$msg = sprintf( __( 'New Site: %1s
-URL: %2s
-Remote IP: %3s
+	$msg = sprintf( __( 'New Site: %1$s
+URL: %2$s
+Remote IP: %3$s
 
-Disable these notifications: %4s' ), $blogname, $siteurl, $_SERVER['REMOTE_ADDR'], $options_site_url);
+Disable these notifications: %4$s' ), $blogname, $siteurl, $_SERVER['REMOTE_ADDR'], $options_site_url);
 	$msg = apply_filters( 'newblog_notify_siteadmin', $msg );
 
 	wp_mail( $email, sprintf( __( 'New Site Registration: %s' ), $siteurl ), $msg );
@@ -1050,10 +1050,10 @@ function newuser_notify_siteadmin( $user_id ) {
 	$user = get_userdata( $user_id );
 
 	$options_site_url = esc_url(network_admin_url('settings.php'));
-	$msg = sprintf(__('New User: %1s
-Remote IP: %2s
+	$msg = sprintf(__('New User: %1$s
+Remote IP: %2$s
 
-Disable these notifications: %3s'), $user->user_login, $_SERVER['REMOTE_ADDR'], $options_site_url);
+Disable these notifications: %3$s'), $user->user_login, $_SERVER['REMOTE_ADDR'], $options_site_url);
 
 	$msg = apply_filters( 'newuser_notify_siteadmin', $msg, $user );
 	wp_mail( $email, sprintf(__('New User Registration: %s'), $user->user_login), $msg );
@@ -1130,7 +1130,7 @@ function install_blog($blog_id, $blog_title = '') {
 
 	$wpdb->suppress_errors();
 	if ( $wpdb->get_results( "DESCRIBE {$wpdb->posts}" ) )
-		die( __( '<h1>Already Installed</h1><p>You appear to have already installed WordPress. To reinstall please clear your old database tables first.</p>' ) . '</body></html>' );
+		die( '<h1>' . __( 'Already Installed' ) . '</h1><p>' . __( 'You appear to have already installed WordPress. To reinstall please clear your old database tables first.' ) . '</p></body></html>' );
 	$wpdb->suppress_errors( false );
 
 	$url = get_blogaddress_by_id( $blog_id );
