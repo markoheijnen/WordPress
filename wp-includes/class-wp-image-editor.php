@@ -74,9 +74,7 @@ abstract class WP_Image_Editor {
 		return self::$implementation;
 	}
 
-	abstract public function test(); // returns bool
 	abstract protected function load(); // returns bool|WP_Error
-	abstract public function supports_mime_type( $mime_type ); // returns bool
 	abstract public function resize( $max_w, $max_h, $crop = false );
 	abstract public function multi_resize( $sizes );
 	abstract public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false );
@@ -84,6 +82,35 @@ abstract class WP_Image_Editor {
 	abstract public function flip( $horz, $vert );
 	abstract public function save( $destfilename = null, $mime_type = null );
 	abstract public function stream( $mime_type = null );
+
+	/**
+	 * Checks to see if current environment supports the editor chosen.
+	 * Must be overridden in a sub-class.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 * @abstract
+	 *
+	 * @return boolean
+	 */
+	public static function test() {
+		return false;
+	}
+
+	/**
+	 * Checks to see if editor supports mime-type specified
+	 * Must be overridden in a sub-class.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 * @abstract
+	 *
+	 * @param string $mime_type
+	 * @return boolean
+	 */
+	public static function supports_mime_type( $mime_type ) {
+		return false;
+	}
 
 	/**
 	 * Gets dimensions of image
