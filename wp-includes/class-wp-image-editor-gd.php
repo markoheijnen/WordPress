@@ -47,7 +47,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @return boolean|\WP_Error
 	 */
-	protected static function load() {
+	protected function load() {
 		if ( $this->image )
 			return true;
 
