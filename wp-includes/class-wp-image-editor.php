@@ -39,7 +39,7 @@ abstract class WP_Image_Editor {
 			$editor = new $implementation( $path );
 			$loaded = $editor->load();
 
-			if ( is_wp_error ( $loaded ) )
+			if ( is_wp_error( $loaded ) )
 				return $loaded;
 
 			return $editor;
@@ -256,19 +256,19 @@ abstract class WP_Image_Editor {
 
 		$result = call_user_func_array( $function, $arguments );
 
-		if( $result && $stream ) {
+		if ( $result && $stream ) {
 			$contents = ob_get_contents();
 
 			$fp = fopen( $dst_file, 'w' );
 
-			if( ! $fp )
+			if ( ! $fp )
 				return false;
 
 			fwrite( $fp, $contents );
 			fclose( $fp );
 		}
 
-		if( $stream ) {
+		if ( $stream ) {
 			ob_end_clean();
 		}
 
@@ -293,7 +293,7 @@ abstract class WP_Image_Editor {
 		$extensions = array_keys( $mime_types );
 
 		foreach( $extensions as $_extension ) {
-			if( preg_match("/{$extension}/i", $_extension ) ) {
+			if ( preg_match("/{$extension}/i", $_extension ) ) {
 				return $mime_types[ $_extension ];
 			}
 		}
