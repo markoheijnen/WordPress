@@ -30,10 +30,11 @@ abstract class WP_Image_Editor {
 	 * @access public
 	 *
 	 * @param string $path Path to File to Load
+	 * @param array $required_methods Methods to require in implementation
 	 * @return WP_Image_Editor|WP_Error|boolean
 	 */
-	public final static function get_instance( $path = null ) {
-		$implementation = apply_filters( 'wp_image_editor_class', self::choose_implementation(), $path );
+	public final static function get_instance( $path = null, $required_methods = null ) {
+		$implementation = apply_filters( 'wp_image_editor_class', self::choose_implementation( $required_methods ), $path );
 
 		if ( $implementation ) {
 			$editor = new $implementation( $path );
@@ -54,19 +55,34 @@ abstract class WP_Image_Editor {
 	 * @since 3.5.0
 	 * @access private
 	 *
+	 * @param $required_methods Array String array of all methods required for implementation returned.
+	 *
 	 * @return string|bool Class name for the first editor that claims to support the request. False if no editor claims to support the request.
 	 */
-	private final static function choose_implementation() {
+	private final static function choose_implementation( $required_methods = null ) {
+		static $tested_editors;
+
+		if ( ( ! ( null === self::$implementation ) ) && $required_methods ) {
+			if ( ! in_array( $required_methods, get_class_methods( self::$implementation ) ) )
+				self::$implementation = null;
+		}
 
 		if ( null === self::$implementation ) {
-			$request_order = apply_filters( 'wp_image_editors', array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
+			$request_order = apply_filters( 'wp_image_editors',
+				array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
 
 			// Loop over each editor on each request looking for one which will serve this request's needs
 			foreach ( $request_order as $editor ) {
 				// Check to see if this editor is a possibility, calls the editor statically
-				if ( ! call_user_func( array( $editor, 'test' ) ) )
+				if ( ! call_user_func( array( $editor, 'test' ) ) ) {
+					$tested_editors[$editor] = false;
+					continue;
+				}
+
+				if ( ! in_array( $required_methods, get_class_methods( self::$implementation ) ) )
 					continue;
 
+				$tested_editors[$editor] = true;
 				self::$implementation = $editor;
 				break;
 			}
