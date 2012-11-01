@@ -107,9 +107,10 @@ abstract class WP_Image_Editor {
 	 * @access public
 	 * @abstract
 	 *
+	 * @param $args array
 	 * @return boolean
 	 */
-	public static function test() {
+	public static function test( $args = null ) {
 		return false;
 	}
 

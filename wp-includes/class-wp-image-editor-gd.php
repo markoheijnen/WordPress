@@ -32,7 +32,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @return boolean
 	 */
-	public static function test() {
+	public static function test( $args = null ) {
 		if ( ! extension_loaded('gd') || ! function_exists('gd_info') )
 			return false;
 
