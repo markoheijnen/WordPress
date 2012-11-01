@@ -73,11 +73,8 @@ abstract class WP_Image_Editor {
 				continue;
 
 			// Make sure that all methods are supported by editor.
-			// If not, break out and continue to check next editor.
-			foreach( $required_methods as $method ) {
-				if ( ! method_exists( $editor, $method ) )
-					continue 2;
-			}
+			if ( array_diff( $required_methods, get_class_methods( $editor ) ) )
+				continue;
 
 			return $editor;
 		}
