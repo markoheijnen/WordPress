@@ -1327,7 +1327,9 @@ function wp_print_media_templates( $attachment ) {
 				<div class="media-progress-bar"><div></div></div>
 			<% } else if ( 'image' === type ) { %>
 				<div class="thumbnail">
-					<img src="<%- url %>" draggable="false" />
+					<div class="centered">
+						<img src="<%- url %>" draggable="false" />
+					</div>
 				</div>
 			<% } else { %>
 				<img src="<%- icon %>" class="icon" draggable="false" />
@@ -1432,6 +1434,26 @@ function wp_print_media_templates( $attachment ) {
 				<?php esc_attr_e('None'); ?>
 			</button>
 		</div>
+	</script>
+
+	<script type="text/html" id="tmpl-gallery-settings">
+		<h4><?php _e('Link To'); ?></h4>
+		<div class="link-to button-group" data-setting="link">
+			<button class="button" value="post">
+				<?php esc_attr_e('Attachment Page'); ?>
+			</button>
+			<button class="button" value="file">
+				<?php esc_attr_e('Media File'); ?>
+			</button>
+		</div>
+
+		<h4><?php _e('Gallery Columns'); ?></h4>
+
+		<select class="columns" name="columns" data-setting="columns">
+			<% _.times( 9, function( i ) { %>
+				<option value="<%- i %>"><%- i %></option>
+			<% }); %>
+		</select>
 	</script>
 
 	<script type="text/html" id="tmpl-editor-attachment">

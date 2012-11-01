@@ -590,7 +590,7 @@ window.wp = window.wp || {};
 				attachments: function( shortcode, parent ) {
 					var shortcodeString = shortcode.string(),
 						result = galleries[ shortcodeString ],
-						attrs, args;
+						attrs, args, query;
 
 					delete galleries[ shortcodeString ];
 
@@ -617,12 +617,14 @@ window.wp = window.wp || {};
 					if ( ! args.post__in )
 						args.parent = attrs.id || parent;
 
-					return media.query( args );
+					query = media.query( args );
+					query.props.set( _.pick( attrs, 'columns', 'link' ) );
+					return query;
 				},
 
 				shortcode: function( attachments ) {
 					var props = attachments.props.toJSON(),
-						attrs = _.pick( props, 'include', 'exclude', 'orderby', 'order' ),
+						attrs = _.pick( props, 'include', 'exclude', 'orderby', 'order', 'link', 'columns' ),
 						shortcode;
 
 					attrs.ids = attachments.pluck('id');
@@ -688,26 +690,29 @@ window.wp = window.wp || {};
 			},
 
 			edit: function() {
-				if ( ! wp.media.view || this.workflow )
+				if ( ! wp.media.view || this.frame )
 					return;
 
-				this.workflow = wp.media({
+				this.frame = wp.media({
 					state:     'gallery',
-					selection: this.attachments.models,
 					title:     mceview.l10n.editGallery,
 					editing:   true,
-					multiple:  true
+					multiple:  true,
+					selection: new wp.media.model.Selection( this.attachments.models, {
+						props:    this.attachments.props.toJSON(),
+						multiple: true
+					})
 				});
 
-				// Create a single-use workflow. If the workflow is closed,
+				// Create a single-use frame. If the frame is closed,
 				// then detach it from the DOM and remove the reference.
-				this.workflow.on( 'close', function() {
-					this.workflow.detach();
-					delete this.workflow;
+				this.frame.on( 'close', function() {
+					this.frame.detach();
+					delete this.frame;
 				}, this );
 
 				// Update the `shortcode` and `attachments`.
-				this.workflow.on( 'update:gallery', function( selection ) {
+				this.frame.get('gallery').on( 'update', function( selection ) {
 					var	view = mceview.get('gallery');
 
 					this.options.shortcode = view.gallery.shortcode( selection );
