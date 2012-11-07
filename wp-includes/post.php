@@ -429,139 +429,139 @@ final class WP_Post {
 	/**
 	 *
 	 * @var int
-	 */	
+	 */
 	public $post_author = 0;
 
 	/**
 	 *
 	 * @var string
-	 */	
+	 */
 	public $post_date = '0000-00-00 00:00:00';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_date_gmt = '0000-00-00 00:00:00';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_content = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_title = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_excerpt = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_status = 'publish';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $comment_status = 'open';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $ping_status = 'open';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_password = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_name = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $to_ping = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $pinged = '';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_modified = '0000-00-00 00:00:00';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_modified_gmt = '0000-00-00 00:00:00';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_content_filtered = '';
 
 	/**
 	 *
 	 * @var int
-	 */		
+	 */
 	public $post_parent = 0;
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $guid = '';
 
 	/**
 	 *
 	 * @var int
-	 */	
+	 */
 	public $menu_order = 0;
 
 	/**
 	 *
 	 * @var string
-	 */	
+	 */
 	public $post_type = 'post';
 
 	/**
 	 *
 	 * @var string
-	 */		
+	 */
 	public $post_mime_type = '';
 
 	/**
 	 *
 	 * @var int
-	 */	
+	 */
 	public $comment_count = 0;
 
 	/**
 	 *
 	 * @var string
-	 */			
+	 */
 	public $filter;
 
 	public static function get_instance( $post_id ) {
@@ -4431,9 +4431,10 @@ function get_private_posts_cap_sql( $post_type ) {
  * @param string $post_type Post type.
  * @param bool $full Optional. Returns a full WHERE statement instead of just an 'andalso' term.
  * @param int $post_author Optional. Query posts having a single author ID.
+ * @param bool $public_only Optional. Only return public posts. Skips cap checks for $current_user.  Default is false.
  * @return string SQL WHERE code that can be added to a query.
  */
-function get_posts_by_author_sql( $post_type, $full = true, $post_author = null ) {
+function get_posts_by_author_sql( $post_type, $full = true, $post_author = null, $public_only = false ) {
 	global $user_ID, $wpdb;
 
 	// Private posts
@@ -4457,18 +4458,21 @@ function get_posts_by_author_sql( $post_type, $full = true, $post_author = null 
 
 	$sql .= "(post_status = 'publish'";
 
-	if ( current_user_can( $cap ) ) {
-		// Does the user have the capability to view private posts? Guess so.
-		$sql .= " OR post_status = 'private'";
-	} elseif ( is_user_logged_in() ) {
-		// Users can view their own private posts.
-		$id = (int) $user_ID;
-		if ( null === $post_author || ! $full ) {
-			$sql .= " OR post_status = 'private' AND post_author = $id";
-		} elseif ( $id == (int) $post_author ) {
+	// Only need to check the cap if $public_only is false
+	if ( false === $public_only ) {
+		if ( current_user_can( $cap ) ) {
+			// Does the user have the capability to view private posts? Guess so.
 			$sql .= " OR post_status = 'private'";
+		} elseif ( is_user_logged_in() ) {
+			// Users can view their own private posts.
+			$id = (int) $user_ID;
+			if ( null === $post_author || ! $full ) {
+				$sql .= " OR post_status = 'private' AND post_author = $id";
+			} elseif ( $id == (int) $post_author ) {
+				$sql .= " OR post_status = 'private'";
+			} // else none
 		} // else none
-	} // else none
+	}
 
 	$sql .= ')';
 
@@ -4586,8 +4590,6 @@ function update_post_cache( &$posts ) {
  *
  * Cleaning means delete from the cache of the post. Will call to clean the term
  * object cache associated with the post ID.
- *
- * clean_post_cache() will call itself recursively for each child post.
  *
  * This function not run if $_wp_suspend_cache_invalidation is not empty. See
  * wp_suspend_cache_invalidation().

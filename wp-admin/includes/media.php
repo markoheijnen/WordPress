@@ -1072,7 +1072,7 @@ function get_media_item( $attachment_id, $args = null ) {
 	$toggle_on  = __( 'Show' );
 	$toggle_off = __( 'Hide' );
 
-	$filename = esc_html( basename( $post->guid ) );
+	$filename = esc_html( wp_basename( $post->guid ) );
 	$title = esc_attr( $post->post_title );
 
 	if ( $_tags = get_the_tags( $attachment_id ) ) {
@@ -1527,11 +1527,6 @@ var addExtImage = {
 		if ( '' == f.src.value || '' == t.width )
 			return false;
 
-		if ( f.title.value ) {
-			title = f.title.value.replace(/'/g, '&#039;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-			title = ' title="'+title+'"';
-		}
-
 		if ( f.alt.value )
 			alt = f.alt.value.replace(/'/g, '&#039;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -1548,7 +1543,7 @@ var addExtImage = {
 
 		cls = caption ? '' : ' class="'+t.align+'"';
 
-		html = '<img alt="'+alt+'" src="'+f.src.value+'"'+title+cls+' width="'+t.width+'" height="'+t.height+'" />';
+		html = '<img alt="'+alt+'" src="'+f.src.value+'"'+cls+' width="'+t.width+'" height="'+t.height+'" />';
 
 		if ( f.url.value ) {
 			url = f.url.value.replace(/'/g, '&#039;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2122,6 +2117,7 @@ function edit_form_image_editor() {
 
 	$filename = esc_html( basename( $post->guid ) );
 	$title = esc_attr( $post->post_title );
+	$alt_text = get_post_meta( $post->ID, '_wp_attachment_image_alt', true );
 
 	$post_mime_types = get_post_mime_types();
 	$keys = array_keys( wp_match_mime_types( array_keys( $post_mime_types ), $post->post_mime_type ) );
@@ -2151,22 +2147,57 @@ function edit_form_image_editor() {
 			<p><?php echo $image_edit_button; ?></p>
 		</div>
 		<div style="display:none" class="image-editor" id="image-editor-<?php echo $attachment_id; ?>"></div>
+	</div>
 
-		<div class="wp_attachment_details">
-			<p>
-				<label for="attachment_url"><strong><?php _e( 'File URL' ); ?></strong></label><br />
-				<input type="text" class="widefat urlfield" readonly="readonly" name="attachment_url" value="<?php echo esc_attr($att_url); ?>" /><br />
-			</p>
-			<p><strong><?php _e( 'File name:' ); ?></strong> <?php echo $filename; ?><br />
-			<strong><?php _e( 'File type:' ); ?></strong> <?php echo $post->post_mime_type; ?>
-			<?php
-				if ( $media_dims )
-					echo '<br /><strong>' . __( 'Dimensions:' ) . '</strong> ' . $media_dims;
-			?>
-			</p>
-		</div>
+	<div class="wp_attachment_details">
+		<p>
+			<label for="attachment_caption"><strong><?php _e( 'Caption' ); ?></strong></label><br />
+			<textarea class="widefat" name="excerpt" id="attachment_caption"><?php echo $post->post_excerpt; ?></textarea>
+		</p>
+		<p>
+			<label for="attachment_alt"><strong><?php _e( 'Alternative Text' ); ?></strong></label><br />
+			<input type="text" class="widefat" name="_wp_attachment_image_alt" id="attachment_alt" value="<?php echo esc_attr( $alt_text ); ?>" />
+		</p>
 	</div>
 	<?php
+	// need a filter on this content
+}
+
+/**
+ * Displays non-editable attachment metadata in the publish metabox
+ *
+ * @since 3.5.0
+ */
+function attachment_submitbox_metadata() {
+	$post = get_post();
+
+	$filename = esc_html( basename( $post->guid ) );
+
+	$media_dims = '';
+	$meta = wp_get_attachment_metadata( $post->ID );
+	if ( is_array( $meta ) && array_key_exists( 'width', $meta ) && array_key_exists( 'height', $meta ) )
+		$media_dims .= "<span id='media-dims-$post->ID'>{$meta['width']}&nbsp;&times;&nbsp;{$meta['height']}</span> ";
+	$media_dims = apply_filters( 'media_meta', $media_dims, $post );
+
+	$att_url = wp_get_attachment_url( $post->ID );
+?>
+	<div class="misc-pub-section">
+			<label for="attachment_url"><?php _e( 'File URL:' ); ?></label>
+			<input type="text" class="widefat urlfield" readonly="readonly" name="attachment_url" value="<?php echo esc_attr($att_url); ?>" />
+	</div>
+	<div class="misc-pub-section">
+		<?php _e( 'File name:' ); ?> <strong><?php echo $filename; ?></strong>
+	</div>
+	<div class="misc-pub-section">
+		<?php _e( 'File type:' ); ?> <strong><?php echo $post->post_mime_type; ?></strong>
+	</div>
+
+<?php if ( $media_dims ) : ?>
+	<div class="misc-pub-section">
+		<?php _e( 'Dimensions:' ); ?> <strong><?php echo $media_dims; ?></strong>
+	</div>
+<?php
+	endif;
 }
 
 add_filter( 'async_upload_image', 'get_media_item', 10, 2 );
@@ -2181,3 +2212,5 @@ add_action( 'media_upload_file',  'wp_media_upload_handler' );
 
 add_filter( 'media_upload_gallery', 'media_upload_gallery' );
 add_filter( 'media_upload_library', 'media_upload_library' );
+
+add_action( 'attachment_submitbox_misc_actions', 'attachment_submitbox_metadata' );

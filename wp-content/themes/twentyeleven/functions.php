@@ -101,7 +101,7 @@ function twentyeleven_setup() {
 	if ( 'dark' == $theme_options['color_scheme'] )
 		$default_background_color = '1d1d1d';
 	else
-		$default_background_color = 'f1f1f1';
+		$default_background_color = 'e2e2e2';
 
 	// Add support for custom backgrounds.
 	add_theme_support( 'custom-background', array(
@@ -375,7 +375,8 @@ add_filter( 'get_the_excerpt', 'twentyeleven_custom_excerpt_more' );
  * Get our wp_nav_menu() fallback, wp_page_menu(), to show a home link.
  */
 function twentyeleven_page_menu_args( $args ) {
-	$args['show_home'] = true;
+	if ( ! isset( $args['show_home'] ) )
+		$args['show_home'] = true;
 	return $args;
 }
 add_filter( 'wp_page_menu_args', 'twentyeleven_page_menu_args' );

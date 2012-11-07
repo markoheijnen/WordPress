@@ -104,11 +104,14 @@ ul.category-tabs li {
 
 div.tabs-panel,
 .wp-tab-panel,
-ul.category-tabs li.tabs,
 ul.add-menu-item-tabs li.tabs,
 .wp-tab-active {
 	border-color: #dfdfdf;
 	background-color: #fff;
+}
+
+ul.category-tabs li.tabs {
+	border-color: #dfdfdf #dfdfdf #fff;
 }
 
 ul.category-tabs li.tabs,
@@ -652,8 +655,8 @@ table.widefat span.spam a,
 	color: #222;
 }
 
-.sidebar-name:hover h3,
-.postbox h3:hover {
+.js .sidebar-name:hover h3,
+.js .postbox h3:hover {
 	color: #000;
 }
 
@@ -1043,8 +1046,10 @@ div.wp-menu-image {
 .icon16.icon-settings,
 .menu-icon-settings div.wp-menu-image,
 .icon16.icon-site,
-.menu-icon-site div.wp-menu-image {
-	background-image: url('../images/menu.png?ver=20120201');
+.menu-icon-site div.wp-menu-image,
+.icon16.icon-generic,
+.menu-icon-generic div.wp-menu-image {
+	background-image: url(../images/menu.png?ver=20121105);
 }
 
 .icon16.icon-dashboard,
@@ -1178,6 +1183,18 @@ div.wp-menu-image {
 #adminmenu .menu-icon-site.current div.wp-menu-image {
 	background-position: -359px -1px;
 }
+
+.icon16.icon-generic,
+#adminmenu .menu-icon-generic div.wp-menu-image {
+	background-position: -330px -34px;
+}
+
+#adminmenu .menu-icon-generic:hover div.wp-menu-image,
+#adminmenu .menu-icon-generic.wp-has-current-submenu div.wp-menu-image,
+#adminmenu .menu-icon-generic.current div.wp-menu-image {
+	background-position: -330px -2px;
+}
+
 /* end menu and screen icons */
 
 /* Screen Icons */
@@ -1211,8 +1228,10 @@ div.wp-menu-image {
 .icon32.icon-settings,
 #icon-options-general,
 .icon32.icon-site,
-#icon-ms-admin {
-	background-image: url(../images/icons32.png?ver=20111206);
+#icon-ms-admin,
+.icon32.icon-generic,
+#icon-generic {
+	background-image: url(../images/icons32.png?ver=20121105);
 }
 
 .icon32.icon-post,
@@ -1280,6 +1299,11 @@ div.wp-menu-image {
 .icon32.icon-site,
 #icon-ms-admin {
 	background-position: -659px -5px;
+}
+
+.icon32.icon-generic,
+#icon-generic {
+	background-position: -708px -5px;
 }
 
 /* end screen icons */
@@ -1379,7 +1403,7 @@ fieldset.inline-edit-col-right .inline-edit-col {
 	color: #D54E21;
 }
 
-.meta-box-sortables .postbox:hover .handlediv {
+.js .meta-box-sortables .postbox:hover .handlediv {
 	background: transparent url(../images/arrows.png) no-repeat 6px 7px;
 }
 
@@ -1514,8 +1538,8 @@ div.widgets-sortables,
 	box-shadow: inset 0 1px 0 #fff;
 }
 
-.sidebar-name:hover,
-#removing-widget {
+.js .sidebar-name:hover,
+.js #removing-widget {
 	color: #d54e21;
 }
 
@@ -1523,11 +1547,11 @@ div.widgets-sortables,
 	color: black;
 }
 
-.sidebar-name-arrow {
+.js .sidebar-name-arrow {
 	background: transparent url(../images/arrows.png) no-repeat 5px 9px;
 }
 
-.sidebar-name:hover .sidebar-name-arrow {
+.js .sidebar-name:hover .sidebar-name-arrow {
 	background: transparent url(../images/arrows-dark.png) no-repeat 5px 9px;
 }
 
@@ -1854,7 +1878,7 @@ div.widgets-sortables,
 }
 
 /* Edit Image */
-.rtl .meta-box-sortables .postbox:hover .handlediv {
+.js.rtl .meta-box-sortables .postbox:hover .handlediv {
 	background: transparent url(../images/arrows.png) no-repeat 6px 7px;
 }
 
@@ -1863,11 +1887,11 @@ div.widgets-sortables,
 	border-left-color: #eee;
 }
 
-.rtl .sidebar-name-arrow {
+.js.rtl .sidebar-name-arrow {
 	background: transparent url(../images/arrows.png) no-repeat 5px 9px;
 }
 
-.rtl .sidebar-name:hover .sidebar-name-arrow {
+.js.rtl .sidebar-name:hover .sidebar-name-arrow {
 	background: transparent url(../images/arrows-dark.png) no-repeat 5px 9px;
 }
 
@@ -1952,9 +1976,11 @@ div.widgets-sortables,
 	.icon32.icon-settings,
 	#icon-options-general,
 	.icon32.icon-site,
-	#icon-ms-admin {
-		background-image: url("../images/icons32-2x.png?ver=20120916");
-		background-size: 708px 45px;
+	#icon-ms-admin,
+	.icon32.icon-generic,
+	#icon-generic {
+		background-image: url(../images/icons32-2x.png?ver=20121105);
+		background-size: 756px 45px;
 	}
 
 	.icon16.icon-dashboard,
@@ -1980,8 +2006,10 @@ div.widgets-sortables,
 	.icon16.icon-settings,
 	.menu-icon-settings div.wp-menu-image,
 	.icon16.icon-site,
-	.menu-icon-site div.wp-menu-image {
-		background-image: url("../images/menu-2x.png?ver=20120916");
+	.menu-icon-site div.wp-menu-image,
+	.icon16.icon-generic,
+	.menu-icon-generic div.wp-menu-image {
+		background-image: url(../images/menu-2x.png?ver=20121105);
 		background-size: 390px 64px;
 	}
 
