@@ -192,7 +192,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 * @param int $src_h The height to crop.
 	 * @param int $dst_w Optional. The destination width.
 	 * @param int $dst_h Optional. The destination height.
-	 * @param int $src_abs Optional. If the source crop points are absolute.
+	 * @param boolean $src_abs Optional. If the source crop points are absolute.
 	 * @return boolean|WP_Error
 	 */
 	public function crop( $src_x, $src_y, $src_w, $src_h, $dst_w = null, $dst_h = null, $src_abs = false ) {
