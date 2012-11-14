@@ -28,6 +28,8 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	/**
 	 * Checks to see if current environment supports Imagick
 	 *
+	 * Requires Imagick::queryFormats, which was introduced in Imagick 2.1.1
+	 *
 	 * @since 3.5.0
 	 * @access public
 	 *
