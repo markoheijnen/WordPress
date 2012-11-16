@@ -1355,6 +1355,7 @@ function wp_enqueue_media( $args = array() ) {
 		'mediaLibraryTitle' => __( 'Media Library' ),
 		'createNewGallery'  => __( 'Create a new gallery' ),
 		'insertIntoPost'    => __( 'Insert into post' ),
+		'returnToLibrary'   => __( '&#8592; Return to library' ),
 
 		// Embed
 		'embedFromUrlTitle' => __( 'Embed From URL' ),
@@ -1446,19 +1447,17 @@ function wp_print_media_templates( $attachment ) {
 		</div>
 		<# if ( data.describe ) { #>
 			<# if ( 'image' === data.type ) { #>
-				<textarea class="describe"
-					placeholder="<?php esc_attr_e('Describe this image&hellip;'); ?>"
-					>{{ data.caption }}</textarea>
+				<input type="text" value="{{ data.caption }}" class="describe" data-setting="caption"
+					placeholder="<?php esc_attr_e('Describe this image&hellip;'); ?>" />
 			<# } else { #>
-				<textarea class="describe"
+				<input type="text" value="{{ data.title }}" class="describe" data-setting="title"
 					<# if ( 'video' === data.type ) { #>
 						placeholder="<?php esc_attr_e('Describe this video&hellip;'); ?>"
 					<# } else if ( 'audio' === data.type ) { #>
 						placeholder="<?php esc_attr_e('Describe this audio file&hellip;'); ?>"
 					<# } else { #>
 						placeholder="<?php esc_attr_e('Describe this media file&hellip;'); ?>"
-					<# } #>
-					>{{ data.title }}</textarea>
+					<# } #> />
 			<# } #>
 		<# } #>
 	</script>
@@ -1522,6 +1521,9 @@ function wp_print_media_templates( $attachment ) {
 	<script type="text/html" id="tmpl-media-selection">
 		<div class="selection-info">
 			<span class="count"></span>
+			<# if ( data.editable ) { #>
+				<a class="edit-selection" href="#"><?php _e('Edit'); ?></a>
+			<# } #>
 			<# if ( data.clearable ) { #>
 				<a class="clear-selection" href="#"><?php _e('Clear'); ?></a>
 			<# } #>
@@ -1680,7 +1682,7 @@ function wp_print_media_templates( $attachment ) {
 			<input type="text" data-setting="alt" />
 		</label>
 
-		<label class="setting align">
+		<div class="setting align">
 			<span><?php _e('Align'); ?></span>
 			<div class="button-group button-large" data-setting="align">
 				<button class="button" value="left">
@@ -1696,7 +1698,7 @@ function wp_print_media_templates( $attachment ) {
 					<?php esc_attr_e('None'); ?>
 				</button>
 			</div>
-		</label>
+		</div>
 
 		<div class="setting link-to">
 			<span><?php _e('Link To'); ?></span>

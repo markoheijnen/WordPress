@@ -372,30 +372,18 @@
 		},
 
 		refreshSelection: function() {
+			var selection = this.get('selection'),
+				mode = this.frame.content.mode();
+
 			this.frame.toolbar.view().refresh();
-			this.trigger( 'refresh:selection', this, this.get('selection') );
+			this.trigger( 'refresh:selection', this, selection );
+
+			if ( ! selection.length && 'browse' !== mode && 'upload' !== mode )
+				this.content();
 		},
 
 		selectUpload: function( attachment ) {
 			this.get('selection').add( attachment );
-		},
-
-		toggleSelection: function( model ) {
-			var selection = this.get('selection');
-
-			if ( ! model )
-				return;
-
-			if ( selection.has( model ) ) {
-				// If the model is the single model, remove it.
-				// If it is not the same as the single model,
-				// it now becomes the single model.
-				selection[ selection.single() === model ? 'remove' : 'single' ]( model );
-			} else {
-				selection.add( model ).single();
-			}
-
-			return this;
 		},
 
 		buildComposite: function() {
@@ -470,9 +458,10 @@
 	// ---------------------------
 	media.controller.Upload = media.controller.Library.extend({
 		defaults: _.defaults({
-			id:     'upload',
-			upload: { text: l10n.uploadMoreFiles },
-			searchable: false
+			id:         'upload',
+			upload:     { text: l10n.uploadMoreFiles },
+			searchable: false,
+			sortable:   true
 		}, media.controller.Library.prototype.defaults ),
 
 		initialize: function() {
@@ -483,10 +472,6 @@
 			// all uploading) attachments.
 			if ( ! library ) {
 				library = new Attachments();
-				library.props.set({
-					orderby: 'date',
-					order:   'ASC'
-				});
 				library.observe( wp.Uploader.queue );
 				this.set( 'library', library );
 			}
@@ -518,7 +503,7 @@
 
 			// The single `Attachment` view to be used in the `Attachments` view.
 			if ( ! this.get('AttachmentView') )
-				this.set( 'AttachmentView', media.view.Attachment.Gallery );
+				this.set( 'AttachmentView', media.view.Attachment.EditLibrary );
 			media.controller.Library.prototype.initialize.apply( this, arguments );
 		},
 
@@ -674,7 +659,8 @@
 			if ( this.options.uploader ) {
 				this.uploader = new media.view.UploaderWindow({
 					uploader: {
-						dropzone: this.modal ? this.modal.$el : this.$el
+						dropzone:  this.modal ? this.modal.$el : this.$el,
+						container: this.$el
 					}
 				});
 			}
@@ -867,6 +853,7 @@
 			this.content.view( new media.view.AttachmentsBrowser({
 				controller: this,
 				collection: state.get('library'),
+				selection:  state.get('selection'),
 				model:      state,
 				sortable:   state.get('sortable'),
 				search:     state.get('searchable'),
@@ -980,6 +967,7 @@
 			main = {
 				multiple: this.options.multiple,
 				menu:      'main',
+				sidebar:   'attachment-settings',
 
 				// Update user settings when users adjust the
 				// attachment display settings.
@@ -1005,7 +993,8 @@
 				// Main states.
 				new media.controller.Library( _.defaults({
 					selection: options.selection,
-					library:   media.query( options.library )
+					library:   media.query( options.library ),
+					editable:  true
 				}, main ) ),
 
 				new media.controller.Upload( main ),
@@ -1058,12 +1047,13 @@
 
 			var handlers = {
 					menu: {
-						batch:   'batchMenu',
-						gallery: 'galleryMenu'
+						'batch':   'batchMenu',
+						'gallery': 'galleryMenu'
 					},
 
 					content: {
-						embed: 'embedContent'
+						'embed':          'embedContent',
+						'edit-selection': 'editSelectionContent'
 					},
 
 					sidebar: {
@@ -1083,19 +1073,6 @@
 			_.each( handlers, function( regionHandlers, region ) {
 				_.each( regionHandlers, function( callback, handler ) {
 					this[ region ].on( 'activate:' + handler, this[ callback ], this );
-				}, this );
-			}, this );
-
-			_.each(['library', 'upload'], function( id ) {
-				this.get( id ).on( 'refresh:selection', function( state, selection ) {
-					var sidebar = this.sidebar;
-
-					if ( ! selection.length )
-						sidebar.mode('clear');
-					else if ( selection.length === 1 )
-						sidebar.mode('attachment-settings');
-					else
-						sidebar.mode('settings');
 				}, this );
 			}, this );
 
@@ -1204,6 +1181,35 @@
 			view.url.focus();
 		},
 
+		editSelectionContent: function() {
+			var state = this.state(),
+				selection = state.get('selection'),
+				view;
+
+			view = new media.view.AttachmentsBrowser({
+				controller: this,
+				collection: selection,
+				selection:  selection,
+				model:      state,
+				sortable:   true,
+				search:     false,
+
+				AttachmentView: media.view.Attachment.EditSelection
+			}).render();
+
+			view.toolbar.set( 'backToLibrary', {
+				text:     l10n.returnToLibrary,
+				priority: -100,
+
+				click: function() {
+					this.controller.content.mode('browse');
+				}
+			});
+
+			// Browse our library of attachments.
+			this.content.view( view );
+		},
+
 		// Sidebars
 		onSidebarGallerySettings: function( options ) {
 			var library = this.state().get('library');
@@ -1248,8 +1254,9 @@
 
 		// Toolbars
 		mainAttachmentsToolbar: function() {
-			this.toolbar.view( new media.view.Toolbar.Insert.Post({
-				controller: this
+			this.toolbar.view( new media.view.Toolbar.Insert({
+				controller: this,
+				editable:   this.state().get('editable')
 			}) );
 		},
 
@@ -1738,13 +1745,36 @@
 	media.view.Toolbar.Insert = media.view.Toolbar.extend({
 		initialize: function() {
 			var controller = this.options.controller,
-				selection = controller.state().get('selection');
+				selection = controller.state().get('selection'),
+				selectionToLibrary;
+
+			selectionToLibrary = function( state, filter ) {
+				return function() {
+					var controller = this.controller,
+						selection = controller.state().get('selection'),
+						edit = controller.get( state ),
+						models = filter ? filter( selection ) : selection.models;
+
+					edit.set( 'library', new media.model.Selection( models, {
+						props:    selection.props.toJSON(),
+						multiple: true
+					}) );
+
+					this.controller.state( state );
+				};
+			};
 
 			this.options.items = _.defaults( this.options.items || {}, {
 				selection: new media.view.Selection({
 					controller: controller,
 					collection: selection,
-					priority:   -40
+					priority:   -40,
+
+					// If the selection is editable, pass the callback to
+					// switch the content mode.
+					editable: this.options.editable && function() {
+						this.controller.content.mode('edit-selection');
+					}
 				}).render(),
 
 				insert: {
@@ -1754,9 +1784,16 @@
 
 					click: function() {
 						controller.close();
-						controller.state().trigger( 'insert', selection );
-						selection.clear();
+						controller.state().trigger( 'insert', selection ).reset();
 					}
+				},
+
+				gallery: {
+					text:     l10n.createNewGallery,
+					priority: 40,
+					click:    selectionToLibrary('gallery-edit', function( selection ) {
+						return selection.where({ type: 'image' });
+					})
 				}
 			});
 
@@ -1764,67 +1801,15 @@
 		},
 
 		refresh: function() {
-			var selection = this.controller.state().get('selection');
-			this.get('insert').model.set( 'disabled', ! selection.length );
-		}
-	});
-
-	// wp.media.view.Toolbar.Insert.Post
-	// ---------------------------------
-	media.view.Toolbar.Insert.Post = media.view.Toolbar.Insert.extend({
-		initialize: function() {
-			var selectionToLibrary = function( state, filter ) {
-					return function() {
-						var controller = this.controller,
-							selection = controller.state().get('selection'),
-							edit = controller.get( state ),
-							models = filter ? filter( selection ) : selection.models;
-
-						edit.set( 'library', new media.model.Selection( models, {
-							props:    selection.props.toJSON(),
-							multiple: true
-						}) );
-
-						this.controller.state( state );
-					};
-				};
-
-			this.options.items = _.defaults( this.options.items || {}, {
-				gallery: {
-					text:     l10n.createNewGallery,
-					priority: 40,
-					click:    selectionToLibrary('gallery-edit', function( selection ) {
-						return selection.where({ type: 'image' });
-					})
-				},
-
-				batch: {
-					text:     l10n.batchInsert,
-					priority: 60,
-					click:    selectionToLibrary('batch-edit')
-				}
-			});
-
-			media.view.Toolbar.Insert.prototype.initialize.apply( this, arguments );
-		},
-
-		refresh: function() {
 			var selection = this.controller.state().get('selection'),
 				count = selection.length;
 
-			// Call the parent's `refresh()` method.
-			media.view.Toolbar.Insert.prototype.refresh.apply( this, arguments );
+			this.get('insert').model.set( 'disabled', ! selection.length );
 
-			// Check if every attachment in the selection is an image.
+			// Check if any attachment in the selection is an image.
 			this.get('gallery').$el.toggle( count > 1 && selection.any( function( attachment ) {
 				return 'image' === attachment.get('type');
 			}) );
-
-			// Batch insert shows for multiple selected attachments.
-			this.get('batch').$el.toggle( count > 1 );
-
-			// Insert only shows for single attachments.
-			this.get('insert').$el.toggle( count <= 1 );
 		}
 	});
 
@@ -2090,7 +2075,8 @@
 			'change [data-setting]':          'updateSetting',
 			'change [data-setting] input':    'updateSetting',
 			'change [data-setting] select':   'updateSetting',
-			'change [data-setting] textarea': 'updateSetting'
+			'change [data-setting] textarea': 'updateSetting',
+			'click .close':                   'removeFromLibrary'
 		},
 
 		buttons: {},
@@ -2162,17 +2148,30 @@
 		},
 
 		toggleSelection: function( event ) {
-			this.controller.state().toggleSelection( this.model );
+			var selection = this.options.selection,
+				model = this.model;
+
+			if ( ! selection )
+				return;
+
+			if ( selection.has( model ) ) {
+				// If the model is the single model, remove it.
+				// If it is not the same as the single model,
+				// it now becomes the single model.
+				selection[ selection.single() === model ? 'remove' : 'single' ]( model );
+			} else {
+				selection.add( model ).single();
+			}
 		},
 
 		selected: function() {
-			var selection = this.controller.state().get('selection');
+			var selection = this.options.selection;
 			if ( selection )
 				return selection.has( this.model );
 		},
 
 		select: function( model, collection ) {
-			var selection = this.controller.state().get('selection');
+			var selection = this.options.selection;
 
 			// Check if a selection exists and if it's the collection provided.
 			// If they're not the same collection, bail; we're in another
@@ -2184,7 +2183,7 @@
 		},
 
 		deselect: function( model, collection ) {
-			var selection = this.controller.state().get('selection');
+			var selection = this.options.selection;
 
 			// Check if a selection exists and if it's the collection provided.
 			// If they're not the same collection, bail; we're in another
@@ -2196,7 +2195,7 @@
 		},
 
 		details: function( model, collection ) {
-			var selection = this.controller.state().get('selection'),
+			var selection = this.options.selection,
 				details;
 
 			if ( selection !== collection )
@@ -2235,6 +2234,13 @@
 				return;
 
 			this.model.save( $setting.data('setting'), event.target.value );
+		},
+
+		removeFromLibrary: function( event ) {
+			// Stop propagation so the model isn't selected.
+			event.stopPropagation();
+
+			this.collection.remove( this.model );
 		}
 	});
 
@@ -2246,24 +2252,11 @@
 	});
 
 	/**
-	 * wp.media.view.Attachment.Gallery
+	 * wp.media.view.Attachment.EditLibrary
 	 */
-	media.view.Attachment.Gallery = media.view.Attachment.extend({
+	media.view.Attachment.EditLibrary = media.view.Attachment.extend({
 		buttons: {
 			close: true
-		},
-
-		events: (function() {
-			var events = _.clone( media.view.Attachment.prototype.events );
-			events['click .close'] = 'removeFromGallery';
-			return events;
-		}()),
-
-		removeFromGallery: function( event ) {
-			// Stop propagation so the model isn't selected.
-			event.stopPropagation();
-
-			this.controller.state().get('library').remove( this.model );
 		}
 	});
 
@@ -2403,7 +2396,9 @@
 			this.$el.html( this.collection.map( function( attachment ) {
 				return new this.options.AttachmentView({
 					controller: this.controller,
-					model:      attachment
+					model:      attachment,
+					collection: this.collection,
+					selection:  this.options.selection
 				}).render().$el;
 			}, this ) );
 
@@ -2419,7 +2414,9 @@
 
 			view = new this.options.AttachmentView({
 				controller: this.controller,
-				model:      attachment
+				model:      attachment,
+				collection: this.collection,
+				selection:  this.options.selection
 			}).render();
 
 			children = this.$el.children();
@@ -2536,6 +2533,7 @@
 			this.attachments = new media.view.Attachments({
 				controller: this.controller,
 				collection: this.collection,
+				selection:  this.options.selection,
 				model:      this.model,
 				sortable:   this.options.sortable,
 
@@ -2618,11 +2616,13 @@
 		template:  media.template('media-selection'),
 
 		events: {
+			'click .edit-selection':  'edit',
 			'click .clear-selection': 'clear'
 		},
 
 		initialize: function() {
 			_.defaults( this.options, {
+				editable:  false,
 				clearable: true
 			});
 
@@ -2630,6 +2630,7 @@
 			this.attachments = new media.view.Attachments({
 				controller: this.controller,
 				collection: this.collection,
+				selection:  this.collection,
 				sortable:   true,
 				model:      new Backbone.Model({
 					edge:   40,
@@ -2670,6 +2671,12 @@
 			this.$('.count').text( this.collection.length + ' ' + l10n.selected );
 		},
 
+		edit: function( event ) {
+			event.preventDefault();
+			if ( this.options.editable )
+				this.options.editable.call( this, this.collection );
+		},
+
 		clear: function( event ) {
 			event.preventDefault();
 			this.collection.clear();
@@ -2681,10 +2688,18 @@
 	 * wp.media.view.Attachment.Selection
 	 */
 	media.view.Attachment.Selection = media.view.Attachment.extend({
+		className: 'attachment selection',
+
 		// On click, just select the model, instead of removing the model from
 		// the selection.
 		toggleSelection: function() {
-			this.controller.state().get('selection').single( this.model );
+			this.options.selection.single( this.model );
+		}
+	});
+
+	media.view.Attachment.EditSelection = media.view.Attachment.Selection.extend({
+		buttons: {
+			close: true
 		}
 	});
 
