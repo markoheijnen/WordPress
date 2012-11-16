@@ -44,7 +44,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Loads image from $this->file into new Imagick Object
+	 * Loads image from $this->file into new Imagick Object.
 	 *
 	 * @since 3.5.0
 	 * @access protected
@@ -109,7 +109,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Sets or updates current image size
+	 * Sets or updates current image size.
 	 *
 	 * @since 3.5.0
 	 * @access protected
@@ -138,7 +138,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Checks to see if editor supports mime-type specified
+	 * Checks to see if editor supports the mime-type specified.
 	 *
 	 * @since 3.5.0
 	 * @access public
@@ -162,6 +162,9 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 
 	/**
 	 * Resizes current image.
+	 *
+	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param int $max_w
 	 * @param int $max_h
@@ -198,6 +201,9 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	/**
 	 * Processes current image and saves to disk
 	 * multiple sizes from single source.
+	 *
+	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param array $sizes
 	 * @return array
@@ -301,14 +307,14 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Flips current image
+	 * Flips current image.
 	 *
 	 * @since 3.5.0
 	 * @access public
 	 *
 	 * @param boolean $horz Horizontal Flip
 	 * @param boolean $vert Vertical Flip
-	 * @returns boolean
+	 * @returns boolean|WP_Error
 	 */
 	public function flip( $horz, $vert ) {
 		try {
@@ -325,7 +331,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Saves current image to file
+	 * Saves current image to file.
+	 *
+	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param string $destfilename
 	 * @param string $mime_type
@@ -384,7 +393,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	}
 
 	/**
-	 * Streams current image to browser
+	 * Streams current image to browser.
+	 *
+	 * @since 3.5.0
+	 * @access public
 	 *
 	 * @param string $mime_type
 	 * @return boolean|WP_Error
