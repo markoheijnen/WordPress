@@ -269,7 +269,7 @@ abstract class WP_Image_Editor {
 	protected function update_size( $width = null, $height = null ) {
 		$this->size = array(
 			'width' => $width,
-			'height' => $height,
+			'height' => $height
 		);
 		return true;
 	}
