@@ -54,20 +54,6 @@ abstract class WP_Image_Editor {
 	}
 
 	/**
-	 * Tests whether there is an editor that supports a given mime type or methods.
-	 *
-	 * @since 3.5.0
-	 * @access public
-	 *
-	 * @param string $mime_type
-	 * @param array $required_methods String array of all methods required
-	 * @return boolean true if an eligible editor is found; false otherwise
-	 */
-	public final static function supports( $mime_type = null, $required_methods = array() ) {
-		return ( (bool) self::choose_implementation( $required_methods, array( 'mime_type' => $mime_type ) ) );
-	}
-
-	/**
 	 * Tests which editors are capable of supporting the request.
 	 *
 	 * @since 3.5.0
@@ -82,7 +68,11 @@ abstract class WP_Image_Editor {
 
 		if ( ! isset( $args['mime_type'] ) && isset( $args['path'] ) ) {
 			$file_info  = wp_check_filetype( $args['path'] );
-			$args['mime_type'] = $file_info['type'];
+
+			// If $file_info['type'] is false, then we let the editor attempt to
+			// figure out the file type, rather than forcing a failure based on extension.
+			if ( isset( $file_info ) && $file_info['type'] )
+				$args['mime_type'] = $file_info['type'];
 		}
 
 		// Loop over each editor on each request looking for one which will serve this request's needs
@@ -106,6 +96,20 @@ abstract class WP_Image_Editor {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Tests whether there is an editor that supports a given mime type or methods.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type Mime type to check for compatibility
+	 * @param array $required_methods String array of all methods required
+	 * @return boolean true if an eligible editor is found; false otherwise
+	 */
+	public final static function supports( $mime_type = null, $required_methods = array() ) {
+		return ( (bool) self::choose_implementation( $required_methods, array( 'mime_type' => $mime_type ) ) );
 	}
 
 	/**
