@@ -147,10 +147,10 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 	 * @return boolean
 	 */
 	public static function supports_mime_type( $mime_type ) {
-		if ( ! $mime_type )
-			return false;
-
 		$imagick_extension = strtoupper( self::get_extension( $mime_type ) );
+
+		if ( ! $imagick_extension )
+			return false;
 
 		try {
 			return ( (bool) Imagick::queryFormats( $imagick_extension ) );

@@ -32,8 +32,13 @@ abstract class WP_Image_Editor {
 	 * @param array $required_methods Methods to require in implementation
 	 * @return WP_Image_Editor|WP_Error
 	 */
-	public final static function get_instance( $path = null, $required_methods = null ) {
-		$implementation = apply_filters( 'wp_image_editor_class', self::choose_implementation( $required_methods ), $path );
+	public final static function get_instance( $path = null, $required_methods = array() ) {
+		$implementation = apply_filters( 'wp_image_editor_class',
+			self::choose_implementation(
+				$required_methods,
+				array( 'path' => $path )
+			)
+		);
 
 		if ( $implementation ) {
 			$editor = new $implementation( $path );
@@ -49,6 +54,20 @@ abstract class WP_Image_Editor {
 	}
 
 	/**
+	 * Tests whether there is an editor that supports a given mime type or methods.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type
+	 * @param array $required_methods String array of all methods required
+	 * @return boolean true if an eligible editor is found; false otherwise
+	 */
+	public final static function supports( $mime_type = null, $required_methods = array() ) {
+		return ( (bool) self::choose_implementation( $required_methods, array( 'mime_type' => $mime_type ) ) );
+	}
+
+	/**
 	 * Tests which editors are capable of supporting the request.
 	 *
 	 * @since 3.5.0
@@ -57,18 +76,27 @@ abstract class WP_Image_Editor {
 	 * @param array $required_methods String array of all methods required for implementation returned.
 	 * @return string|bool Class name for the first editor that claims to support the request. False if no editor claims to support the request.
 	 */
-	private final static function choose_implementation( $required_methods = null ) {
+	private final static function choose_implementation( $required_methods = array(), $args = array() ) {
 		$request_order = apply_filters( 'wp_image_editors',
 			array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
 
-		if ( ! $required_methods )
-			$required_methods = array();
+		if ( ! isset( $args['mime_type'] ) && isset( $args['path'] ) ) {
+			$file_info  = wp_check_filetype( $args['path'] );
+			$args['mime_type'] = $file_info['type'];
+		}
 
 		// Loop over each editor on each request looking for one which will serve this request's needs
 		foreach ( $request_order as $editor ) {
 			// Check to see if this editor is a possibility, calls the editor statically
-			if ( ! call_user_func( array( $editor, 'test' ) ) )
+			if ( ! call_user_func( array( $editor, 'test' ), $args ) )
 				continue;
+
+			if ( isset( $args['mime_type'] ) &&
+				! call_user_func(
+					array( $editor, 'supports_mime_type' ),
+					$args['mime_type'] ) ) {
+				continue;
+			}
 
 			// Make sure that all methods are supported by editor.
 			if ( array_diff( $required_methods, get_class_methods( $editor ) ) )
@@ -76,6 +104,7 @@ abstract class WP_Image_Editor {
 
 			return $editor;
 		}
+
 		return false;
 	}
 
@@ -240,7 +269,7 @@ abstract class WP_Image_Editor {
 	protected function update_size( $width = null, $height = null ) {
 		$this->size = array(
 			'width' => $width,
-			'height' => $height
+			'height' => $height,
 		);
 		return true;
 	}
