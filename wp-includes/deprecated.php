@@ -3329,3 +3329,37 @@ function user_pass_ok($user_login, $user_pass) {
  * @deprecated 3.5.0
  */
 function _save_post_hook() {}
+
+/**
+ * Check if the installed version of GD supports particular image type
+ *
+ * @since 2.9.0
+ * @deprecated 3.5.0
+ * @see WP_Image_Editor::supports()
+ *
+ * @param string $mime_type
+ * @return bool
+ */
+function gd_edit_image_support($mime_type) {
+	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor::supports()' );
+	if ( function_exists('imagetypes') ) {
+		switch( $mime_type ) {
+			case 'image/jpeg':
+				return (imagetypes() & IMG_JPG) != 0;
+			case 'image/png':
+				return (imagetypes() & IMG_PNG) != 0;
+			case 'image/gif':
+				return (imagetypes() & IMG_GIF) != 0;
+		}
+	} else {
+		switch( $mime_type ) {
+			case 'image/jpeg':
+				return function_exists('imagecreatefromjpeg');
+			case 'image/png':
+				return function_exists('imagecreatefrompng');
+			case 'image/gif':
+				return function_exists('imagecreatefromgif');
+		}
+	}
+	return false;
+}

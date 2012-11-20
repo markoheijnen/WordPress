@@ -902,37 +902,6 @@ function get_taxonomies_for_attachments( $output = 'names' ) {
 }
 
 /**
- * Check if the installed version of GD supports particular image type
- *
- * @since 2.9.0
- *
- * @param string $mime_type
- * @return bool
- */
-function gd_edit_image_support($mime_type) {
-	if ( function_exists('imagetypes') ) {
-		switch( $mime_type ) {
-			case 'image/jpeg':
-				return (imagetypes() & IMG_JPG) != 0;
-			case 'image/png':
-				return (imagetypes() & IMG_PNG) != 0;
-			case 'image/gif':
-				return (imagetypes() & IMG_GIF) != 0;
-		}
-	} else {
-		switch( $mime_type ) {
-			case 'image/jpeg':
-				return function_exists('imagecreatefromjpeg');
-			case 'image/png':
-				return function_exists('imagecreatefrompng');
-			case 'image/gif':
-				return function_exists('imagecreatefromgif');
-		}
-	}
-	return false;
-}
-
-/**
  * Create new GD image resource with transparency support
  * @TODO: Deprecate if possible.
  *
