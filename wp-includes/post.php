@@ -615,16 +615,20 @@ final class WP_Post {
 		}
 
 		if ( 'post_category' == $key ) {
-			$terms = get_the_terms( $this, 'category' );
-			if ( ! $terms )
+			if ( is_object_in_taxonomy( $this->post_type, 'category' ) )
+				$terms = get_the_terms( $this, 'category' );
+
+			if ( empty( $terms ) )
 				return array();
 
 			return wp_list_pluck( $terms, 'term_id' );
 		}
 
 		if ( 'tags_input' == $key ) {
-			$terms = get_the_terms( $this, 'post_tag' );
-			if ( ! $terms )
+			if ( is_object_in_taxonomy( $this->post_type, 'post_tag' ) )
+				$terms = get_the_terms( $this, 'post_tag' );
+
+			if ( empty( $terms ) )
 				return array();
 
 			return wp_list_pluck( $terms, 'name' );
@@ -2173,6 +2177,23 @@ function wp_count_attachments( $mime_type = '' ) {
 	$stats['trash'] = $wpdb->get_var( "SELECT COUNT( * ) FROM $wpdb->posts WHERE post_type = 'attachment' AND post_status = 'trash' $and");
 
 	return (object) $stats;
+}
+
+/**
+ * Get default post mime types
+ *
+ * @since 2.9.0
+ *
+ * @return array
+ */
+function get_post_mime_types() {
+	$post_mime_types = array(	//	array( adj, noun )
+		'image' => array(__('Images'), __('Manage Images'), _n_noop('Image <span class="count">(%s)</span>', 'Images <span class="count">(%s)</span>')),
+		'audio' => array(__('Audio'), __('Manage Audio'), _n_noop('Audio <span class="count">(%s)</span>', 'Audio <span class="count">(%s)</span>')),
+		'video' => array(__('Video'), __('Manage Video'), _n_noop('Video <span class="count">(%s)</span>', 'Video <span class="count">(%s)</span>')),
+	);
+
+	return apply_filters('post_mime_types', $post_mime_types);
 }
 
 /**

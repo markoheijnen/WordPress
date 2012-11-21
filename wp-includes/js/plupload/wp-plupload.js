@@ -194,11 +194,11 @@ window.wp = window.wp || {};
 			else if ( ! response.success )
 				return error( response.data.message, response.data, file );
 
-			_.each(['file','loaded','size','uploading','percent'], function( key ) {
+			_.each(['file','loaded','size','percent'], function( key ) {
 				file.attachment.unset( key );
 			});
 
-			file.attachment.set( response.data );
+			file.attachment.set( _.extend( response.data, { uploading: false }) );
 			wp.media.model.Attachment.get( response.data.id, file.attachment );
 
 			complete = Uploader.queue.all( function( attachment ) {
@@ -211,19 +211,19 @@ window.wp = window.wp || {};
 			self.success( file.attachment );
 		});
 
-		this.uploader.bind( 'Error', function( up, error ) {
+		this.uploader.bind( 'Error', function( up, pluploadError ) {
 			var message = pluploadL10n.default_error,
 				key;
 
 			// Check for plupload errors.
 			for ( key in Uploader.errorMap ) {
-				if ( error.code === plupload[ key ] ) {
+				if ( pluploadError.code === plupload[ key ] ) {
 					message = Uploader.errorMap[ key ];
 					break;
 				}
 			}
 
-			error( message, error, error.file );
+			error( message, pluploadError, pluploadError.file );
 			up.refresh();
 		});
 

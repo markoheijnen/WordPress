@@ -15,11 +15,6 @@ wp_enqueue_script('post');
 if ( wp_is_mobile() )
 	wp_enqueue_script( 'jquery-touch-punch' );
 
-if ( post_type_supports($post_type, 'editor') || post_type_supports($post_type, 'thumbnail') ) {
-	add_thickbox();
-	wp_enqueue_media();
-}
-
 /**
  * Post ID global
  * @name $post_ID
@@ -28,6 +23,11 @@ if ( post_type_supports($post_type, 'editor') || post_type_supports($post_type, 
 $post_ID = isset($post_ID) ? (int) $post_ID : 0;
 $user_ID = isset($user_ID) ? (int) $user_ID : 0;
 $action = isset($action) ? $action : '';
+
+if ( post_type_supports($post_type, 'editor') || post_type_supports($post_type, 'thumbnail') ) {
+	add_thickbox();
+	wp_enqueue_media( array( 'post' => $post_ID ) );
+}
 
 $messages = array();
 $messages['post'] = array(
@@ -322,7 +322,7 @@ if ( !empty($shortlink) )
     $sample_permalink_html .= '<input id="shortlink" type="hidden" value="' . esc_attr($shortlink) . '" /><a href="#" class="button button-small" onclick="prompt(&#39;URL:&#39;, jQuery(\'#shortlink\').val()); return false;">' . __('Get Shortlink') . '</a>';
 
 if ( $post_type_object->public && ! ( 'pending' == get_post_status( $post ) && !current_user_can( $post_type_object->cap->publish_posts ) ) ) { ?>
-	<div id="edit-slug-box">
+	<div id="edit-slug-box" class="hide-if-no-js">
 	<?php
 		if ( $sample_permalink_html && 'auto-draft' != get_post_status( $post ) )
 			echo $sample_permalink_html;
@@ -418,3 +418,29 @@ if ( post_type_supports( $post_type, 'comments' ) )
 try{document.post.title.focus();}catch(e){}
 </script>
 <?php endif; ?>
+
+<?php if ( 'attachment' == $post_type ) { ?>
+<script type="text/javascript">
+(function($){
+	function getFieldsContent() {
+		return [ $('#title').val() || '',
+			$('#attachment_caption').val() || '',
+			$('#attachment_alt').val() || '',
+			$('#attachment_content').val() || '',
+			$('#post_name').val() || '' ];
+	}
+
+	var initial = getFieldsContent();
+
+	window.onbeforeunload = function() {
+		var i, changed, current = getFieldsContent();
+		for ( var i = 0; i < initial.length; i++ ) {
+ 			if ( changed = ( initial[i] !== current[i]) )
+ 				break;
+ 		}
+ 		if ( changed )
+			return '<?php _e('The changes you made will be lost if you navigate away from this page.'); ?>';
+	};
+})(jQuery);
+</script>
+<?php } ?>

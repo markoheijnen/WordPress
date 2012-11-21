@@ -53,17 +53,21 @@ function _wp_translate_postdata( $update = false, $post_data = null ) {
 
 	$ptype = get_post_type_object( $post_data['post_type'] );
 	if ( isset($post_data['user_ID']) && ($post_data['post_author'] != $post_data['user_ID']) ) {
-		if ( !current_user_can( $ptype->cap->edit_others_posts ) ) {
-			if ( 'page' == $post_data['post_type'] ) {
-				return new WP_Error( 'edit_others_pages', $update ?
-					__( 'You are not allowed to edit pages as this user.' ) :
-					__( 'You are not allowed to create pages as this user.' )
-				);
-			} else {
-				return new WP_Error( 'edit_others_posts', $update ?
-					__( 'You are not allowed to edit posts as this user.' ) :
-					__( 'You are not allowed to create posts as this user.' )
-				);
+		if ( $update ) {
+			if ( ! current_user_can( $ptype->cap->edit_post, $post_data['ID'] ) ) {
+				if ( 'page' == $post_data['post_type'] ) {
+					return new WP_Error( 'edit_others_pages', __( 'You are not allowed to edit pages as this user.' ) );
+				} else {
+					return new WP_Error( 'edit_others_posts', __( 'You are not allowed to edit posts as this user.' ) );
+				}
+			}
+		} else {
+			if ( ! current_user_can( $ptype->cap->edit_others_posts )  ) {
+				if ( 'page' == $post_data['post_type'] ) {
+					return new WP_Error( 'edit_others_pages', __( 'You are not allowed to create pages as this user.' ) );
+				} else {
+					return new WP_Error( 'edit_others_posts', __( 'You are not allowed to create posts as this user.' ) );
+				}
 			}
 		}
 	}
@@ -234,6 +238,9 @@ function edit_post( $post_data = null ) {
 			// update_meta expects slashed
 			update_post_meta( $post_ID, '_wp_attachment_image_alt', addslashes( $image_alt ) );
 		}
+
+		if ( isset( $post_data['attachments'][ $post_ID ] ) )
+			$post_data = apply_filters( 'attachment_fields_to_save', $post_data, $post_data['attachments'][ $post_ID ] );
 	}
 
 	add_meta( $post_ID );
@@ -873,23 +880,6 @@ function wp_edit_posts_query( $q = false ) {
 	wp( $query );
 
 	return $avail_post_stati;
-}
-
-/**
- * Get default post mime types
- *
- * @since 2.9.0
- *
- * @return array
- */
-function get_post_mime_types() {
-	$post_mime_types = array(	//	array( adj, noun )
-		'image' => array(__('Images'), __('Manage Images'), _n_noop('Image <span class="count">(%s)</span>', 'Images <span class="count">(%s)</span>')),
-		'audio' => array(__('Audio'), __('Manage Audio'), _n_noop('Audio <span class="count">(%s)</span>', 'Audio <span class="count">(%s)</span>')),
-		'video' => array(__('Video'), __('Manage Video'), _n_noop('Video <span class="count">(%s)</span>', 'Video <span class="count">(%s)</span>')),
-	);
-
-	return apply_filters('post_mime_types', $post_mime_types);
 }
 
 /**

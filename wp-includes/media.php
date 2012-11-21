@@ -225,10 +225,12 @@ function get_image_tag($id, $alt, $title, $align, $size='medium') {
 	list( $img_src, $width, $height ) = image_downsize($id, $size);
 	$hwstring = image_hwstring($width, $height);
 
+	$title = $title ? 'title="' . esc_attr( $title ) . '" ' : '';
+
 	$class = 'align' . esc_attr($align) .' size-' . esc_attr($size) . ' wp-image-' . $id;
 	$class = apply_filters('get_image_tag_class', $class, $id, $align, $size);
 
-	$html = '<img src="' . esc_attr($img_src) . '" alt="' . esc_attr($alt) . '" '.$hwstring.'class="'.$class.'" />';
+	$html = '<img src="' . esc_attr($img_src) . '" alt="' . esc_attr($alt) . '" ' . $title . $hwstring . 'class="' . $class . '" />';
 
 	$html = apply_filters( 'get_image_tag', $html, $id, $alt, $title, $align, $size );
 
@@ -1260,7 +1262,7 @@ function wp_prepare_attachment_for_js( $attachment ) {
 	}
 
 	if ( function_exists('get_compat_media_markup') )
-		$response['compat'] = get_compat_media_markup( $attachment->ID );
+		$response['compat'] = get_compat_media_markup( $attachment->ID, array( 'taxonomies' => true ) );
 
 	return apply_filters( 'wp_prepare_attachment_for_js', $response, $attachment, $meta );
 }
@@ -1291,19 +1293,24 @@ function wp_enqueue_media( $args = array() ) {
 	unset( $tabs['type'], $tabs['type_url'], $tabs['gallery'], $tabs['library'] );
 
 	$settings = array(
-		'tabs'   => $tabs,
-		'tabUrl' => add_query_arg( array(
-			'chromeless' => true
-		), admin_url('media-upload.php') ),
+		'tabs'      => $tabs,
+		'tabUrl'    => add_query_arg( array( 'chromeless' => true ), admin_url('media-upload.php') ),
+		'mimeTypes' => wp_list_pluck( get_post_mime_types(), 0 ),
+		'captions'  => ! apply_filters( 'disable_captions', '' ),
+		'nonce'     => array(
+			'sendToEditor' => wp_create_nonce( 'media-send-to-editor' ),
+		),
 	);
 
-	if ( isset( $args['post'] ) )
-		$settings['postId'] = get_post( $args['post'] )->ID;
+	$post = null;
+	if ( isset( $args['post'] ) ) {
+		$post = get_post( $args['post'] );
+		$settings['postId'] = $post->ID;
+	}
 
-	wp_localize_script( 'media-views', '_wpMediaViewsL10n', array(
-		// Settings
-		'settings' => $settings,
+	$hier = $post && is_post_type_hierarchical( $post->post_type );
 
+	$strings = array(
 		// Generic
 		'url'         => __( 'URL' ),
 		'insertMedia' => __( 'Insert Media' ),
@@ -1321,10 +1328,12 @@ function wp_enqueue_media( $args = array() ) {
 		'uploadMoreFiles'   => __( 'Upload more files' ),
 
 		// Library
-		'mediaLibraryTitle' => __( 'Media Library' ),
-		'createNewGallery'  => __( 'Create a new gallery' ),
-		'insertIntoPost'    => __( 'Insert into post' ),
-		'returnToLibrary'   => __( '&#8592; Return to library' ),
+		'mediaLibraryTitle'  => __( 'Media Library' ),
+		'createNewGallery'   => __( 'Create a new gallery' ),
+		'returnToLibrary'    => __( '&#8592; Return to library' ),
+		'allMediaItems'      => __( 'All media items' ),
+		'insertIntoPost'     => $hier ? __( 'Insert into page' ) : __( 'Insert into post' ),
+		'uploadedToThisPost' => $hier ? __( 'Uploaded to this page' ) : __( 'Uploaded to this post' ),
 
 		// Embed
 		'embedFromUrlTitle' => __( 'Embed From URL' ),
@@ -1338,9 +1347,16 @@ function wp_enqueue_media( $args = array() ) {
 		'updateGallery'      => __( 'Update gallery' ),
 		'continueEditing'    => __( 'Continue editing' ),
 		'addToGallery'       => __( 'Add to gallery' ),
-	) );
+	);
 
-	wp_enqueue_script( 'media-upload' );
+	$settings = apply_filters( 'media_view_settings', $settings, $post );
+	$strings  = apply_filters( 'media_view_strings',  $strings,  $post );
+
+	$strings['settings'] = $settings;
+
+	wp_localize_script( 'media-views', '_wpMediaViewsL10n', $strings );
+
+	wp_enqueue_script( 'media-editor' );
 	wp_enqueue_style( 'media-views' );
 	wp_plupload_default_settings();
 	add_action( 'admin_footer', 'wp_print_media_templates' );
@@ -1359,6 +1375,7 @@ function wp_print_media_templates( $attachment ) {
 		<div class="media-frame-content"></div>
 		<div class="media-frame-sidebar"></div>
 		<div class="media-frame-toolbar"></div>
+		<div class="media-frame-uploader"></div>
 	</script>
 
 	<script type="text/html" id="tmpl-media-modal">
@@ -1413,6 +1430,10 @@ function wp_print_media_templates( $attachment ) {
 
 			<# if ( data.buttons.close ) { #>
 				<a class="close button" href="#">&times;</a>
+			<# } #>
+
+			<# if ( data.buttons.check ) { #>
+				<a class="check" href="#"><span>&#10003;</span><span class="dash">&ndash;</span></a>
 			<# } #>
 		</div>
 		<# if ( data.describe ) { #>
@@ -1644,10 +1665,12 @@ function wp_print_media_templates( $attachment ) {
 			<img src="{{ data.model.url }}" draggable="false" />
 		</div>
 
-		<label class="setting caption">
-			<span><?php _e('Caption'); ?></span>
-			<textarea data-setting="caption" />
-		</label>
+		<?php if ( ! apply_filters( 'disable_captions', '' ) ) : ?>
+			<label class="setting caption">
+				<span><?php _e('Caption'); ?></span>
+				<textarea data-setting="caption" />
+			</label>
+		<?php endif; ?>
 
 		<label class="setting alt-text">
 			<span><?php _e('Alt Text'); ?></span>

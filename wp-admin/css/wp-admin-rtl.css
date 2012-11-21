@@ -922,6 +922,11 @@ th.sorted a span {
 	padding-right: 18px;
 }
 
+.compat-attachment-fields th {
+	padding-right: 0;
+	padding-left: 10px;
+}
+
 /*------------------------------------------------------------------------------
   11.1 - Custom Fields
 ------------------------------------------------------------------------------*/
@@ -1049,6 +1054,7 @@ span.description,
 	padding: 0 5px 0 0;
 }
 
+.media-item .edit-attachment,
 .media-item .error-div a.dismiss,
 .describe-toggle-on,
 .describe-toggle-off {
@@ -1082,6 +1088,21 @@ span.description,
 /*------------------------------------------------------------------------------
   14.1 - Media Uploader
 ------------------------------------------------------------------------------*/
+
+#find-posts-input {
+	float: right;
+}
+
+#find-posts-search {
+	float: right;
+	margin-right: 3px;
+	margin-left: 4px;
+}
+
+.find-box-search .spinner {
+	left: auto;
+	right: 115px;
+}
 
 #find-posts-response .found-radio {
 	padding: 5px 8px 0 0;
@@ -1909,6 +1930,11 @@ a.rsswidget,
 }
 
 #dashboard-widgets h3 .postbox-title-action {
+	right: auto;
+	left: 10px;
+}
+
+.js #dashboard-widgets h3 .postbox-title-action {
 	right: auto;
 	left: 30px;
 }
