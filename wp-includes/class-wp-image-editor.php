@@ -29,19 +29,17 @@ abstract class WP_Image_Editor {
 	 * @access public
 	 *
 	 * @param string $path Path to File to Load
+	 * @param string|array $args Array of requirements.  Accepts { 'mime_type'=>string, 'methods'=>{string, string, ...} }
 	 * @param array $required_methods Methods to require in implementation
 	 * @return WP_Image_Editor|WP_Error
 	 */
-	public final static function get_instance( $path = null, $required_methods = array() ) {
-		$implementation = apply_filters( 'wp_image_editor_class',
-			self::choose_implementation(
-				$required_methods,
-				array( 'path' => $path )
-			)
-		);
+	public final static function get_instance( $path, $args = array() ) {
+		$args['path'] = $path;
+
+		$implementation = apply_filters( 'wp_image_editor_class', self::choose_implementation( $args ) );
 
 		if ( $implementation ) {
-			$editor = new $implementation( $path );
+			$editor = new $implementation( $args['path'] );
 			$loaded = $editor->load();
 
 			if ( is_wp_error( $loaded ) )
@@ -50,7 +48,7 @@ abstract class WP_Image_Editor {
 			return $editor;
 		}
 
-		return new WP_Error( 'no_editor', __('No editor could be selected') );
+		return new WP_Error( 'image_no_editor', __('No editor could be selected.') );
 	}
 
 	/**
@@ -59,10 +57,10 @@ abstract class WP_Image_Editor {
 	 * @since 3.5.0
 	 * @access private
 	 *
-	 * @param array $required_methods String array of all methods required for implementation returned.
+	 * @param array $args Array of requirements. Accepts { 'path'=>string, 'mime_type'=>string, 'methods'=>{string, string, ...} }
 	 * @return string|bool Class name for the first editor that claims to support the request. False if no editor claims to support the request.
 	 */
-	private final static function choose_implementation( $required_methods = array(), $args = array() ) {
+	private final static function choose_implementation( $args = array() ) {
 		$request_order = apply_filters( 'wp_image_editors',
 			array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
 
@@ -89,8 +87,10 @@ abstract class WP_Image_Editor {
 			}
 
 			// Make sure that all methods are supported by editor.
-			if ( array_diff( $required_methods, get_class_methods( $editor ) ) )
+			if ( isset( $args['methods'] ) &&
+				 array_diff( $args['methods'], get_class_methods( $editor ) ) ) {
 				continue;
+			}
 
 			return $editor;
 		}
@@ -104,12 +104,11 @@ abstract class WP_Image_Editor {
 	 * @since 3.5.0
 	 * @access public
 	 *
-	 * @param string $mime_type Mime type to check for compatibility
-	 * @param array $required_methods String array of all methods required
+	 * @param string|array $args Array of requirements.  Accepts { 'path'=>string, 'mime_type'=>string, 'methods'=>{string, string, ...} }
 	 * @return boolean true if an eligible editor is found; false otherwise
 	 */
-	public final static function supports( $mime_type = null, $required_methods = array() ) {
-		return ( (bool) self::choose_implementation( $required_methods, array( 'mime_type' => $mime_type ) ) );
+	public final static function supports( $args = array() ) {
+		return ( (bool) self::choose_implementation( $args ) );
 	}
 
 	/**
