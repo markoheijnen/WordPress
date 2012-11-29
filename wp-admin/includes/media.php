@@ -383,17 +383,27 @@ document.body.className = document.body.className.replace('no-js', 'js');
  * @param string $editor_id
  */
 function media_buttons($editor_id = 'content') {
-	wp_enqueue_media( array(
-		'post' => get_post()
-	) );
+	$post = get_post();
+	if ( ! $post && ! empty( $GLOBALS['post_ID'] ) )
+		$post = $GLOBALS['post_ID'];
 
-	$context = apply_filters('media_buttons_context', __('Upload/Insert %s'));
+	wp_enqueue_media( array(
+		'post' => $post
+	) );
 
 	$img = '<span class="wp-media-buttons-icon"></span> ';
 
 	echo '<a href="#" class="button insert-media add_media" data-editor="' . esc_attr( $editor_id ) . '" title="' . esc_attr__( 'Add Media' ) . '">' . $img . __( 'Add Media' ) . '</a>';
 
-	echo '<a href="' . esc_url( get_upload_iframe_src() ) . '" class="thickbox add_media" id="' . esc_attr( $editor_id ) . '-add_media" title="' . esc_attr__( 'Add Media' ) . '" onclick="return false;">' . sprintf( $context, $img ) . '</a>';
+	// Don't use this filter. Want to add a button? Use the media_buttons action.
+	$legacy_filter = apply_filters('media_buttons_context', ''); // deprecated
+
+	if ( $legacy_filter ) {
+		// #WP22559. Close <a> if a plugin started by closing <a> to open their own <a> tag.
+		if ( 0 === stripos( trim( $legacy_filter ), '</a>' ) )
+			$legacy_filter .= '</a>';
+		echo $legacy_filter;
+	}
 }
 add_action( 'media_buttons', 'media_buttons' );
 
@@ -1122,7 +1132,7 @@ function get_media_item( $attachment_id, $args = null ) {
 	$media_dims = apply_filters( 'media_meta', $media_dims, $post );
 
 	$image_edit_button = '';
-	if ( WP_Image_Editor::supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
+	if ( wp_attachment_is_image( $post->ID ) && wp_image_editor_supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
 		$nonce = wp_create_nonce( "image_editor-$post->ID" );
 		$image_edit_button = "<input type='button' id='imgedit-open-btn-$post->ID' onclick='imageEdit.open( $post->ID, \"$nonce\" )' class='button' value='" . esc_attr__( 'Edit Image' ) . "' /> <span class='spinner'></span>";
 	}
@@ -1497,6 +1507,11 @@ $plupload_init = array(
 	'urlstream_upload' => true,
 	'multipart_params' => $post_params
 );
+
+// Multi-file uploading doesn't currently work in iOS Safari,
+// single-file allows the built-in camera to be used as source for images
+if ( wp_is_mobile() )
+	$plupload_init['multi_selection'] = false;
 
 $plupload_init = apply_filters( 'plupload_init', $plupload_init );
 
@@ -2166,9 +2181,16 @@ function wp_media_insert_url_form( $default_view = 'image' ) {
  * @since 2.6.0
  */
 function media_upload_flash_bypass() {
+	$browser_uploader = admin_url( 'media-new.php?browser-uploader' );
+
+	if ( $post = get_post() )
+		$browser_uploader .= '&amp;post_id=' . intval( $post->ID );
+	elseif ( ! empty( $GLOBALS['post_ID'] ) )
+		$browser_uploader .= '&amp;post_id=' . intval( $GLOBALS['post_ID'] );
+
 	?>
 	<p class="upload-flash-bypass">
-	<?php printf( __( 'You are using the multi-file uploader. Problems? Try the <a href="%1$s" target="%2$s">browser uploader</a> instead.' ), admin_url( 'media-new.php?browser-uploader' ), '_blank' ); ?>
+	<?php printf( __( 'You are using the multi-file uploader. Problems? Try the <a href="%1$s" target="%2$s">browser uploader</a> instead.' ), $browser_uploader, '_blank' ); ?>
 	</p>
 	<?php
 }
@@ -2253,7 +2275,7 @@ function edit_form_image_editor() {
 	$att_url = wp_get_attachment_url( $post->ID );
 
 	$image_edit_button = '';
-	if ( WP_Image_Editor::supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
+	if ( wp_attachment_is_image( $post->ID ) && wp_image_editor_supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
 		$nonce = wp_create_nonce( "image_editor-$post->ID" );
 		$image_edit_button = "<input type='button' id='imgedit-open-btn-$post->ID' onclick='imageEdit.open( $post->ID, \"$nonce\" )' class='button' value='" . esc_attr__( 'Edit Image' ) . "' /> <span class='spinner'></span>";
 	}

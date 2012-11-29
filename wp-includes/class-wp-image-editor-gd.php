@@ -15,6 +15,7 @@
  * @uses WP_Image_Editor Extends class
  */
 class WP_Image_Editor_GD extends WP_Image_Editor {
+
 	protected $image = false; // GD Resource
 
 	function __destruct() {
@@ -32,11 +33,42 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @return boolean
 	 */
-	public static function test( $args = null ) {
+	public static function test( $args = array() ) {
 		if ( ! extension_loaded('gd') || ! function_exists('gd_info') )
 			return false;
 
+		// On some setups GD library does not provide imagerotate() - Ticket #11536
+		if ( isset( $args['methods'] ) &&
+			 in_array( 'rotate', $args['methods'] ) &&
+			 ! function_exists('imagerotate') ){
+
+				return false;
+		}
+
 		return true;
+	}
+
+	/**
+	 * Checks to see if editor supports the mime-type specified.
+	 *
+	 * @since 3.5.0
+	 * @access public
+	 *
+	 * @param string $mime_type
+	 * @return boolean
+	 */
+	public static function supports_mime_type( $mime_type ) {
+		$image_types = imagetypes();
+		switch( $mime_type ) {
+			case 'image/jpeg':
+				return ($image_types & IMG_JPG) != 0;
+			case 'image/png':
+				return ($image_types & IMG_PNG) != 0;
+			case 'image/gif':
+				return ($image_types & IMG_GIF) != 0;
+		}
+
+		return false;
 	}
 
 	/**
@@ -47,7 +79,7 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 	 *
 	 * @return boolean|\WP_Error
 	 */
-	protected function load() {
+	public function load() {
 		if ( $this->image )
 			return true;
 
@@ -88,29 +120,6 @@ class WP_Image_Editor_GD extends WP_Image_Editor {
 			$height = imagesy( $this->image );
 
 		return parent::update_size( $width, $height );
-	}
-
-	/**
-	 * Checks to see if editor supports the mime-type specified.
-	 *
-	 * @since 3.5.0
-	 * @access public
-	 *
-	 * @param string $mime_type
-	 * @return boolean
-	 */
-	public static function supports_mime_type( $mime_type ) {
-		$image_types = imagetypes();
-		switch( $mime_type ) {
-			case 'image/jpeg':
-				return ($image_types & IMG_JPG) != 0;
-			case 'image/png':
-				return ($image_types & IMG_PNG) != 0;
-			case 'image/gif':
-				return ($image_types & IMG_GIF) != 0;
-		}
-
-		return false;
 	}
 
 	/**

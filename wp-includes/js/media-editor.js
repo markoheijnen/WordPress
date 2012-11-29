@@ -157,7 +157,8 @@
 				icontag:    'dt',
 				captiontag: 'dd',
 				columns:    3,
-				size:       'thumbnail'
+				size:       'thumbnail',
+				orderby:    'menu_order ID'
 			},
 
 			attachments: function( shortcode ) {
@@ -170,11 +171,16 @@
 				if ( result )
 					return result;
 
-				attrs = shortcode.attrs.named;
+				// Fill the default shortcode attributes.
+				attrs = _.defaults( shortcode.attrs.named, wp.media.gallery.defaults );
 				args  = _.pick( attrs, 'orderby', 'order' );
 
 				args.type    = 'image';
 				args.perPage = -1;
+
+				// Map the `orderby` attribute to the corresponding model property.
+				if ( ! attrs.orderby || /^menu_order(?: ID)?$/i.test( attrs.orderby ) )
+					args.orderby = 'menuOrder';
 
 				// Map the `ids` param to the correct query args.
 				if ( attrs.ids ) {
@@ -191,11 +197,7 @@
 					args.parent = attrs.id;
 
 				// Collect the attributes that were not included in `args`.
-				others = {};
-				_.filter( attrs, function( value, key ) {
-					if ( _.isUndefined( args[ key ] ) )
-						others[ key ] = value;
-				});
+				others = _.omit( attrs, 'id', 'ids', 'include', 'exclude', 'orderby', 'order' );
 
 				query = media.query( args );
 				query.gallery = new Backbone.Model( others );
@@ -204,13 +206,20 @@
 
 			shortcode: function( attachments ) {
 				var props = attachments.props.toJSON(),
-					attrs = _.pick( props, 'include', 'exclude', 'orderby', 'order' ),
+					attrs = _.pick( props, 'orderby', 'order' ),
 					shortcode, clone;
 
 				if ( attachments.gallery )
 					_.extend( attrs, attachments.gallery.toJSON() );
 
+				// Convert all gallery shortcodes to use the `ids` property.
+				// Ignore `post__in` and `post__not_in`; the attachments in
+				// the collection will already reflect those properties.
 				attrs.ids = attachments.pluck('id');
+
+				// Copy the `parent` post ID.
+				if ( props.parent )
+					attrs.id = props.parent;
 
 				// If the `ids` attribute is set and `orderby` attribute
 				// is the default value, clear it for cleaner output.
@@ -272,7 +281,12 @@
 					selection.props.unset('orderby');
 				});
 
-				return wp.media({
+				// Destroy the previous gallery frame.
+				if ( this.frame )
+					this.frame.dispose();
+
+				// Store the current gallery frame.
+				this.frame = wp.media({
 					frame:     'post',
 					state:     'gallery-edit',
 					title:     wp.media.view.l10n.editGalleryTitle,
@@ -280,6 +294,8 @@
 					multiple:  true,
 					selection: selection
 				});
+
+				return this.frame;
 			}
 		};
 	}());
@@ -348,31 +364,21 @@
 
 			workflow = workflows[ id ] = wp.media( _.defaults( options || {}, {
 				frame:    'post',
-				title:    wp.media.view.l10n.insertMedia,
+				title:    wp.media.view.l10n.addMedia,
 				multiple: true
 			} ) );
 
 			workflow.on( 'insert', function( selection ) {
-				var state = workflow.state(),
-					details = state.get('details');
+				var state = workflow.state();
 
 				selection = selection || state.get('selection');
 
-				if ( ! selection || ! details )
+				if ( ! selection )
 					return;
 
 				selection.each( function( attachment ) {
-					var detail = details[ attachment.cid ];
-
-					if ( detail )
-						detail = detail.toJSON();
-
-					// Reset the attachment details.
-					delete details[ attachment.cid ];
-
-					attachment = attachment.toJSON();
-
-					this.send.attachment( detail, attachment );
+					var display = state.display( attachment ).toJSON();
+					this.send.attachment( display, attachment.toJSON() );
 				}, this );
 			}, this );
 
@@ -436,15 +442,17 @@
 					id: attachment.id
 				};
 
+				if ( props.linkUrl )
+					options.url = props.linkUrl;
+
 				if ( 'image' === attachment.type ) {
 					html = wp.media.string.image( props );
-					options['caption'] = caption;
+					options.post_excerpt = caption;
 
 					_.each({
-						align:   'image-align',
-						size:    'image-size',
-						alt:     'image-alt',
-						linkUrl: 'url'
+						align: 'align',
+						size:  'image-size',
+						alt:   'image_alt'
 					}, function( option, prop ) {
 						if ( props[ prop ] )
 							options[ option ] = props[ prop ];
@@ -452,13 +460,14 @@
 
 				} else {
 					html = wp.media.string.link( props );
-					options.title = props.title;
+					options.post_title = props.title;
 				}
 
 				return media.post( 'send-attachment-to-editor', {
 					nonce:      wp.media.view.settings.nonce.sendToEditor,
 					attachment: options,
-					html:       html
+					html:       html,
+					post_id:    wp.media.view.settings.postId
 				}).done( function( resp ) {
 					wp.media.editor.insert( resp );
 				});
@@ -466,10 +475,11 @@
 
 			link: function( embed ) {
 				return media.post( 'send-link-to-editor', {
-					nonce: wp.media.view.settings.nonce.sendToEditor,
-					src:   embed.linkUrl,
-					title: embed.title,
-					html:  wp.media.string.link( embed )
+					nonce:   wp.media.view.settings.nonce.sendToEditor,
+					src:     embed.linkUrl,
+					title:   embed.title,
+					html:    wp.media.string.link( embed ),
+					post_id: wp.media.view.settings.postId
 				}).done( function( resp ) {
 					wp.media.editor.insert( resp );
 				});
@@ -477,10 +487,9 @@
 		},
 
 		init: function() {
-			$(document.body).on('click', '.insert-media', function( event ) {
+			$(document.body).on( 'click', '.insert-media', function( event ) {
 				var $this = $(this),
-					editor = $this.data('editor'),
-					workflow;
+					editor = $this.data('editor');
 
 				event.preventDefault();
 
@@ -491,20 +500,43 @@
 				// See: http://core.trac.wordpress.org/ticket/22445
 				$this.blur();
 
-				if ( ! _.isString( editor ) )
-					return;
+				wp.media.editor.open( editor );
+			});
+		},
 
-				workflow = wp.media.editor.get( editor );
+		open: function( id ) {
+			var workflow, editor;
 
-				// If the workflow exists, just open it.
-				if ( workflow ) {
-					workflow.open();
-					return;
+			// If an empty `id` is provided, default to `wpActiveEditor`.
+			id = id || wpActiveEditor;
+
+			if ( typeof tinymce !== 'undefined' && tinymce.activeEditor ) {
+				// If that doesn't work, fall back to `tinymce.activeEditor`.
+				if ( ! id ) {
+					editor = tinymce.activeEditor;
+					id = id || editor.id;
+				} else {
+					editor = tinymce.get( id );
 				}
 
-				// Initialize the editor's workflow if we haven't yet.
-				wp.media.editor.add( editor );
-			});
+				// Save a bookmark of the caret position, needed for IE
+				if ( tinymce.isIE && editor && ! editor.isHidden() )
+					editor.windowManager.insertimagebookmark = editor.selection.getBookmark();
+			}
+
+			// Last but not least, fall back to the empty string.
+			id = id || '';
+
+			workflow = wp.media.editor.get( id );
+
+			// If the workflow exists, open it.
+			// Initialize the editor's workflow if we haven't yet.
+			if ( workflow )
+				workflow.open();
+			else
+				workflow = wp.media.editor.add( id );
+
+			return workflow;
 		}
 	};
 

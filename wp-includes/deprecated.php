@@ -3210,13 +3210,13 @@ function _get_post_ancestors( &$post ) {
  *
  * @since 2.1.0
  * @deprecated 3.5.0
- * @see WP_Image_Editor
+ * @see wp_get_image_editor()
  *
  * @param string $file Filename of the image to load.
  * @return resource The resulting image resource on success, Error string on failure.
  */
 function wp_load_image( $file ) {
-	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor' );
+	_deprecated_function( __FUNCTION__, '3.5', 'wp_get_image_editor()' );
 
 	if ( is_numeric( $file ) )
 		$file = get_attached_file( $file );
@@ -3250,7 +3250,7 @@ function wp_load_image( $file ) {
  *
  * @since 2.5.0
  * @deprecated 3.5.0
- * @see WP_Image_Editor
+ * @see wp_get_image_editor()
  *
  * @param string $file Image file path.
  * @param int $max_w Maximum width to resize to.
@@ -3262,9 +3262,9 @@ function wp_load_image( $file ) {
  * @return mixed WP_Error on failure. String with new destination path.
  */
 function image_resize( $file, $max_w, $max_h, $crop = false, $suffix = null, $dest_path = null, $jpeg_quality = 90 ) {
-	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor' );
+	_deprecated_function( __FUNCTION__, '3.5', 'wp_get_image_editor()' );
 
-	$editor = WP_Image_Editor::get_instance( $file );
+	$editor = wp_get_image_editor( $file );
 	if ( is_wp_error( $editor ) )
 		return $editor;
 	$editor->set_quality( $jpeg_quality );
@@ -3335,13 +3335,14 @@ function _save_post_hook() {}
  *
  * @since 2.9.0
  * @deprecated 3.5.0
- * @see WP_Image_Editor::supports()
+ * see wp_image_editor_supports()
  *
  * @param string $mime_type
  * @return bool
  */
 function gd_edit_image_support($mime_type) {
-	_deprecated_function( __FUNCTION__, '3.5', 'WP_Image_Editor::supports()' );
+	_deprecated_function( __FUNCTION__, '3.5', 'wp_image_editor_supports()' );
+
 	if ( function_exists('imagetypes') ) {
 		switch( $mime_type ) {
 			case 'image/jpeg':

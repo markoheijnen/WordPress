@@ -884,6 +884,12 @@ input[type="number"].small-text {
 	margin: 1px 8px 0 0;
 }
 
+.tablenav #changeit,
+.tablenav #delete_all,
+.tablenav #clear-recent-list {
+	margin-top: 1px;
+}
+
 .tablenav .actions select {
 	float: left;
 	margin-right: 6px;
@@ -3832,8 +3838,7 @@ abbr.required {
 }
 
 .media-item .describe-toggle-off,
-.media-item.open .describe-toggle-on,
-.media-item.open img.pinkynail {
+.media-item.open .describe-toggle-on {
 	display: none;
 }
 
@@ -5207,15 +5212,6 @@ h2 .nav-tab {
 	padding-top: 20px;
 }
 
-.about-wrap .changelog {
-	overflow: hidden;
-}
-
-.about-wrap .changelog li {
-	list-style-type: disc;
-	margin-left: 3em;
-}
-
 .about-wrap .feature-section {
 	padding-bottom: 20px;
 }
@@ -5292,6 +5288,35 @@ h2 .nav-tab {
 	border-radius: 3px;
 }
 
+.about-wrap .feature-section.three-col img {
+	margin: 0.5em 0 0.5em 5px;
+	max-width: 100%;
+	float: none;
+}
+
+.ie8 .about-wrap .feature-section.three-col img {
+	margin-left: 0;
+}
+
+.about-wrap .feature-section.images-stagger-right img {
+	float: right;
+	margin: 0 5px 12px 2em;
+}
+
+.about-wrap .feature-section.images-stagger-left img {
+	float: left;
+	margin: 0 2em 12px 5px;
+}
+
+.about-wrap .feature-section img.image-100 {
+	margin: 0 0 2em 0;
+	width: 100%;
+}
+
+.about-wrap .feature-section img.image-66 {
+	width: 65%;
+}
+
 .about-wrap .feature-section img.image-50 {
 	max-width: 50%;
 }
@@ -5305,8 +5330,11 @@ h2 .nav-tab {
 	border-style: solid;
 }
 
+.about-wrap .images-stagger-right img.image-30:nth-child(2) {
+	margin-left: 1em;
+}
+
 .about-wrap .feature-section.three-col {
-	padding-top: 15px;
 	margin-bottom: 0;
 }
 
@@ -5318,16 +5346,6 @@ h2 .nav-tab {
 
 .about-wrap .feature-section.three-col h4 {
 	margin:  0 0 0.6em 0;
-}
-
-.about-wrap .feature-section.three-col img {
-	margin: 0.5em 0 0.5em 5px;
-	max-width: 100%;
-	float: none;
-}
-
-.ie8 .about-wrap .feature-section.three-col img {
-	margin-left: 0;
 }
 
 .about-wrap .feature-section.three-col .last-feature {
@@ -5350,20 +5368,36 @@ h2 .nav-tab {
 	float: left;
 }
 
-.about-wrap .feature-section.images-stagger-right img {
-	float: right;
-	margin: 0 5px 12px 12px;
+.about-wrap .changelog .feature-section {
+	overflow: hidden;
+	padding-bottom: 0;
 }
 
-.about-wrap .feature-section.images-stagger-left img {
-	float: left;
-	margin: 0 12px 12px 5px;
+.about-wrap .changelog li {
+	list-style-type: disc;
+	margin-left: 3em;
 }
 
 @media only screen and (max-width: 900px) {
 	.about-wrap .feature-section.images-stagger-left img,
 	.about-wrap .feature-section.images-stagger-right img {
 		clear: both;
+	}
+}
+
+@media only screen and (max-width: 768px) {
+	.about-wrap .feature-section img.image-66 {
+		float: none;
+		width: 98%;
+		max-width: 98%;
+	}
+
+	.about-wrap .feature-section.images-stagger-right img.image-66 {
+		margin-left: 3px;
+	}
+
+	.about-wrap .feature-section.images-stagger-left img.image-66 {
+		margin-right: 3px;
 	}
 }
 
@@ -8289,6 +8323,12 @@ a.widget-control-edit {
 .widgets_access .sidebar-name,
 .widgets_access .widget .widget-top {
 	cursor: default;
+}
+
+/* Enable draggable on IE10 touch events until it's rolled into jQuery UI core */
+.ui-sortable,
+.ui-draggable {
+	-ms-touch-action: none;
 }
 
 /* =Media Queries

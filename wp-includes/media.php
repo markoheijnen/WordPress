@@ -383,7 +383,7 @@ function image_resize_dimensions($orig_w, $orig_h, $dest_w, $dest_h, $crop = fal
  */
 function image_make_intermediate_size( $file, $width, $height, $crop = false ) {
 	if ( $width || $height ) {
-		$editor = WP_Image_Editor::get_instance( $file );
+		$editor = wp_get_image_editor( $file );
 
 		if ( is_wp_error( $editor ) || is_wp_error( $editor->resize( $width, $height, $crop ) ) )
 			return false;
@@ -669,6 +669,12 @@ function gallery_shortcode($attr) {
 	static $instance = 0;
 	$instance++;
 
+	if ( ! empty( $attr['ids'] ) ) {
+		// 'ids' is explicitly ordered
+		$attr['orderby'] = 'post__in';
+		$attr['include'] = $attr['ids'];
+	}
+
 	// Allow plugins/themes to override the default gallery template.
 	$output = apply_filters('post_gallery', '', $attr);
 	if ( $output != '' )
@@ -690,7 +696,6 @@ function gallery_shortcode($attr) {
 		'captiontag' => 'dd',
 		'columns'    => 3,
 		'size'       => 'thumbnail',
-		'ids'        => '',
 		'include'    => '',
 		'exclude'    => ''
 	), $attr));
@@ -698,12 +703,6 @@ function gallery_shortcode($attr) {
 	$id = intval($id);
 	if ( 'RAND' == $order )
 		$orderby = 'none';
-
-	if ( !empty( $ids ) ) {
-		// 'ids' is explicitly ordered
-		$orderby = 'post__in';
-		$include = $ids;
-	}
 
 	if ( !empty($include) ) {
 		$_attachments = get_posts( array('include' => $include, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $order, 'orderby' => $orderby) );
@@ -1140,6 +1139,95 @@ function wp_max_upload_size() {
 }
 
 /**
+ * Returns a WP_Image_Editor instance and loads file into it.
+ *
+ * @since 3.5.0
+ * @access public
+ *
+ * @param string $path Path to file to load
+ * @param array $args Additional data. Accepts { 'mime_type'=>string, 'methods'=>{string, string, ...} }
+ * @return WP_Image_Editor|WP_Error
+ */
+function wp_get_image_editor( $path, $args = array() ) {
+	$args['path'] = $path;
+
+	if ( ! isset( $args['mime_type'] ) ) {
+		$file_info  = wp_check_filetype( $args['path'] );
+
+		// If $file_info['type'] is false, then we let the editor attempt to
+		// figure out the file type, rather than forcing a failure based on extension.
+		if ( isset( $file_info ) && $file_info['type'] )
+			$args['mime_type'] = $file_info['type'];
+	}
+
+	$implementation = _wp_image_editor_choose( $args );
+
+	if ( $implementation ) {
+		$editor = new $implementation( $path );
+		$loaded = $editor->load();
+
+		if ( is_wp_error( $loaded ) )
+			return $loaded;
+
+		return $editor;
+	}
+
+	return new WP_Error( 'image_no_editor', __('No editor could be selected.') );
+}
+
+/**
+ * Tests whether there is an editor that supports a given mime type or methods.
+ *
+ * @since 3.5.0
+ * @access public
+ *
+ * @param string|array $args Array of requirements.  Accepts { 'mime_type'=>string, 'methods'=>{string, string, ...} }
+ * @return boolean true if an eligible editor is found; false otherwise
+ */
+function wp_image_editor_supports( $args = array() ) {
+	return (bool) _wp_image_editor_choose( $args );
+}
+
+/**
+ * Tests which editors are capable of supporting the request.
+ *
+ * @since 3.5.0
+ * @access private
+ *
+ * @param array $args Additional data. Accepts { 'mime_type'=>string, 'methods'=>{string, string, ...} }
+ * @return string|bool Class name for the first editor that claims to support the request. False if no editor claims to support the request.
+ */
+function _wp_image_editor_choose( $args = array() ) {
+	require_once ABSPATH . WPINC . '/class-wp-image-editor.php';
+	require_once ABSPATH . WPINC . '/class-wp-image-editor-gd.php';
+	require_once ABSPATH . WPINC . '/class-wp-image-editor-imagick.php';
+
+	$implementations = apply_filters( 'wp_image_editors',
+		array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
+
+	foreach ( $implementations as $implementation ) {
+		if ( ! call_user_func( array( $implementation, 'test' ), $args ) )
+			continue;
+
+		if ( isset( $args['mime_type'] ) &&
+			! call_user_func(
+				array( $implementation, 'supports_mime_type' ),
+				$args['mime_type'] ) ) {
+			continue;
+		}
+
+		if ( isset( $args['methods'] ) &&
+			 array_diff( $args['methods'], get_class_methods( $implementation ) ) ) {
+			continue;
+		}
+
+		return $implementation;
+	}
+
+	return false;
+}
+
+/**
  * Prints default plupload arguments.
  *
  * @since 3.4.0
@@ -1158,13 +1246,18 @@ function wp_plupload_default_settings() {
 		'file_data_name'      => 'async-upload', // key passed to $_FILE.
 		'multiple_queues'     => true,
 		'max_file_size'       => $max_upload_size . 'b',
-		'url'                 => admin_url( 'admin-ajax.php', 'relative' ),
+		'url'                 => admin_url( 'async-upload.php', 'relative' ),
 		'flash_swf_url'       => includes_url( 'js/plupload/plupload.flash.swf' ),
 		'silverlight_xap_url' => includes_url( 'js/plupload/plupload.silverlight.xap' ),
 		'filters'             => array( array( 'title' => __( 'Allowed Files' ), 'extensions' => '*') ),
 		'multipart'           => true,
 		'urlstream_upload'    => true,
 	);
+
+	// Multi-file uploading doesn't currently work in iOS Safari,
+	// single-file allows the built-in camera to be used as source for images
+	if ( wp_is_mobile() )
+		$defaults['multi_selection'] = false;
 
 	$defaults = apply_filters( 'plupload_default_settings', $defaults );
 
@@ -1182,6 +1275,7 @@ function wp_plupload_default_settings() {
 			'mobile'    => wp_is_mobile(),
 			'supported' => _device_can_upload(),
 		),
+		'limitExceeded' => is_multisite() && ! is_upload_space_available()
 	);
 
 	$script = 'var _wpPluploadSettings = ' . json_encode( $settings ) . ';';
@@ -1204,13 +1298,16 @@ add_action( 'customize_controls_enqueue_scripts', 'wp_plupload_default_settings'
  */
 function wp_prepare_attachment_for_js( $attachment ) {
 	if ( ! $attachment = get_post( $attachment ) )
-	   return;
+		return;
 
 	if ( 'attachment' != $attachment->post_type )
-	   return;
+		return;
 
 	$meta = wp_get_attachment_metadata( $attachment->ID );
-	list( $type, $subtype ) = explode( '/', $attachment->post_mime_type );
+	if ( false !== strpos( $attachment->post_mime_type, '/' ) )
+		list( $type, $subtype ) = explode( '/', $attachment->post_mime_type );
+	else
+		list( $type, $subtype ) = array( $attachment->post_mime_type, '' );
 
 	$attachment_url = wp_get_attachment_url( $attachment->ID );
 
@@ -1229,24 +1326,53 @@ function wp_prepare_attachment_for_js( $attachment ) {
 		'uploadedTo'  => $attachment->post_parent,
 		'date'        => strtotime( $attachment->post_date_gmt ) * 1000,
 		'modified'    => strtotime( $attachment->post_modified_gmt ) * 1000,
+		'menuOrder'   => $attachment->menu_order,
 		'mime'        => $attachment->post_mime_type,
 		'type'        => $type,
 		'subtype'     => $subtype,
 		'icon'        => wp_mime_type_icon( $attachment->ID ),
 		'dateFormatted' => mysql2date( get_option('date_format'), $attachment->post_date ),
+		'nonces'      => array(
+			'update' => wp_create_nonce( 'update-post_' . $attachment->ID ),
+			'delete' => wp_create_nonce( 'delete-post_' . $attachment->ID ),
+		),
 	);
 
 	if ( $meta && 'image' === $type ) {
 		$sizes = array();
-		$base_url = str_replace( wp_basename( $attachment_url ), '', $attachment_url );
+		$possible_sizes = apply_filters( 'image_size_names_choose', array(
+			'thumbnail' => __('Thumbnail'),
+			'medium'    => __('Medium'),
+			'large'     => __('Large'),
+			'full'      => __('Full Size'),
+		) );
+		unset( $possible_sizes['full'] );
 
-		if ( isset( $meta['sizes'] ) ) {
-			foreach ( $meta['sizes'] as $slug => $size ) {
-				$sizes[ $slug ] = array(
-					'height'      => $size['height'],
-					'width'       => $size['width'],
-					'url'         => $base_url . $size['file'],
-					'orientation' => $size['height'] > $size['width'] ? 'portrait' : 'landscape',
+		// Loop through all potential sizes that may be chosen. Try to do this with some efficiency.
+		// First: run the image_downsize filter. If it returns something, we can use its data.
+		// If the filter does not return something, then image_downsize() is just an expensive
+		// way to check the image metadata, which we do second.
+		foreach ( $possible_sizes as $size => $label ) {
+			if ( $downsize = apply_filters( 'image_downsize', false, $attachment->ID, $size ) ) {
+				if ( ! $downsize[3] )
+					continue;
+				$sizes[ $size ] = array(
+					'height'      => $downsize[2],
+					'width'       => $downsize[1],
+					'url'         => $downsize[0],
+					'orientation' => $downsize[2] > $downsize[1] ? 'portrait' : 'landscape',
+				);
+			} elseif ( isset( $meta['sizes'][ $size ] ) ) {
+				if ( ! isset( $base_url ) )
+					$base_url = str_replace( wp_basename( $attachment_url ), '', $attachment_url );
+
+				// Nothing from the filter, so consult image metadata if we have it.
+				$size_meta = $meta['sizes'][ $size ];
+				$sizes[ $size ] = array(
+					'height'      => $size_meta['height'],
+					'width'       => $size_meta['width'],
+					'url'         => $base_url . $size_meta['file'],
+					'orientation' => $size_meta['height'] > $size_meta['width'] ? 'portrait' : 'landscape',
 				);
 			}
 		}
@@ -1300,6 +1426,7 @@ function wp_enqueue_media( $args = array() ) {
 		'nonce'     => array(
 			'sendToEditor' => wp_create_nonce( 'media-send-to-editor' ),
 		),
+		'postId'    => 0,
 	);
 
 	$post = null;
@@ -1313,7 +1440,7 @@ function wp_enqueue_media( $args = array() ) {
 	$strings = array(
 		// Generic
 		'url'         => __( 'URL' ),
-		'insertMedia' => __( 'Insert Media' ),
+		'addMedia'    => __( 'Add Media' ),
 		'search'      => __( 'Search' ),
 		'select'      => __( 'Select' ),
 		'cancel'      => __( 'Cancel' ),
@@ -1334,10 +1461,10 @@ function wp_enqueue_media( $args = array() ) {
 		'allMediaItems'      => __( 'All media items' ),
 		'insertIntoPost'     => $hier ? __( 'Insert into page' ) : __( 'Insert into post' ),
 		'uploadedToThisPost' => $hier ? __( 'Uploaded to this page' ) : __( 'Uploaded to this post' ),
+		'warnDelete' =>      __( "You are about to permanently delete this item.\n  'Cancel' to stop, 'OK' to delete." ),
 
-		// Embed
-		'embedFromUrlTitle' => __( 'Embed From URL' ),
-		'insertEmbed'       => __( 'Insert embed' ),
+		// From URL
+		'fromUrlTitle'       => __( 'From URL' ),
 
 		// Gallery
 		'createGalleryTitle' => __( 'Create Gallery' ),
@@ -1368,12 +1495,11 @@ function wp_enqueue_media( $args = array() ) {
  *
  * @since 3.5.0
  */
-function wp_print_media_templates( $attachment ) {
+function wp_print_media_templates() {
 	?>
 	<script type="text/html" id="tmpl-media-frame">
 		<div class="media-frame-menu"></div>
 		<div class="media-frame-content"></div>
-		<div class="media-frame-sidebar"></div>
 		<div class="media-frame-toolbar"></div>
 		<div class="media-frame-uploader"></div>
 	</script>
@@ -1381,7 +1507,7 @@ function wp_print_media_templates( $attachment ) {
 	<script type="text/html" id="tmpl-media-modal">
 		<div class="media-modal">
 			<h3 class="media-modal-title">{{ data.title }}</h3>
-			<a class="media-modal-close" href="" title="<?php esc_attr_e('Close'); ?>">&times;</a>
+			<a class="media-modal-close media-modal-icon" href="#" title="<?php esc_attr_e('Close'); ?>"></a>
 		</div>
 		<div class="media-modal-backdrop">
 			<div></div>
@@ -1396,21 +1522,84 @@ function wp_print_media_templates( $attachment ) {
 
 	<script type="text/html" id="tmpl-uploader-inline">
 		<div class="uploader-inline-content">
-			<div class="pre-upload-ui">
-				<?php do_action( 'pre-upload-ui' ); ?>
-				<?php do_action( 'pre-plupload-upload-ui' ); ?>
-			</div>
+		<?php if ( ! _device_can_upload() ) : ?>
+			<h3><?php _e('The web browser on your device cannot be used to upload files. You may be able to use the <a href="http://wordpress.org/extend/mobile/">native app for your device</a> instead.'); ?></h3>
+		<?php elseif ( is_multisite() && ! is_upload_space_available() ) : ?>
+			<h3><?php _e( 'Upload Limit Exceeded' ); ?></h3>
+			<?php do_action( 'upload_ui_over_quota' ); ?>
 
+		<?php else : ?>
 			<div class="upload-ui">
-				<h3><?php _e( 'Drop files anywhere to upload' ); ?></h3>
+				<h3 class="drop-instructions"><?php _e( 'Drop files anywhere to upload' ); ?></h3>
 				<a href="#" class="browser button button-hero"><?php _e( 'Select Files' ); ?></a>
 			</div>
 
+			<div class="upload-inline-status"></div>
+
 			<div class="post-upload-ui">
-				<?php do_action( 'post-plupload-upload-ui' ); ?>
+				<?php
+				do_action( 'pre-upload-ui' );
+				do_action( 'pre-plupload-upload-ui' );
+
+				if ( 10 === remove_action( 'post-plupload-upload-ui', 'media_upload_flash_bypass' ) ) {
+					do_action( 'post-plupload-upload-ui' );
+					add_action( 'post-plupload-upload-ui', 'media_upload_flash_bypass' );
+				} else {
+					do_action( 'post-plupload-upload-ui' );
+				}
+
+				$upload_size_unit = $max_upload_size = wp_max_upload_size();
+				$byte_sizes = array( 'KB', 'MB', 'GB' );
+
+				for ( $u = -1; $upload_size_unit > 1024 && $u < count( $byte_sizes ) - 1; $u++ ) {
+					$upload_size_unit /= 1024;
+				}
+
+				if ( $u < 0 ) {
+					$upload_size_unit = 0;
+					$u = 0;
+				} else {
+					$upload_size_unit = (int) $upload_size_unit;
+				}
+
+				?>
+
+				<p class="max-upload-size"><?php
+					printf( __( 'Maximum upload file size: %d%s.' ), esc_html($upload_size_unit), esc_html($byte_sizes[$u]) );
+				?></p>
+
+				<?php if ( ( $GLOBALS['is_IE'] || $GLOBALS['is_opera']) && $max_upload_size > 100 * 1024 * 1024 ) :
+					$browser_uploader = admin_url( 'media-new.php?browser-uploader&post_id=' ) . '{{ data.postId }}';
+					?>
+					<p class="big-file-warning"><?php printf( __( 'Your browser has some limitations uploading large files with the multi-file uploader. Please use the <a href="%1$s" target="%2$s">browser uploader</a> for files over 100MB.' ),
+						$browser_uploader, '_blank' ); ?></p>
+				<?php endif; ?>
+
 				<?php do_action( 'post-upload-ui' ); ?>
 			</div>
+		<?php endif; ?>
 		</div>
+	</script>
+
+	<script type="text/html" id="tmpl-uploader-status">
+		<h3><?php _e( 'Uploading' ); ?></h3>
+		<a class="upload-dismiss-errors" href="#"><?php _e('Dismiss Errors'); ?></a>
+
+		<div class="media-progress-bar"><div></div></div>
+		<div class="upload-details">
+			<span class="upload-count">
+				<span class="upload-index"></span> / <span class="upload-total"></span>
+			</span>
+			<span class="upload-detail-separator">&ndash;</span>
+			<span class="upload-filename"></span>
+		</div>
+		<div class="upload-errors"></div>
+	</script>
+
+	<script type="text/html" id="tmpl-uploader-status-error">
+		<span class="upload-error-label"><?php _e('Error'); ?></span>
+		<span class="upload-error-filename">{{{ data.filename }}}</span>
+		<span class="upload-error-message">{{ data.message }}</span>
 	</script>
 
 	<script type="text/html" id="tmpl-attachment">
@@ -1425,15 +1614,17 @@ function wp_print_media_templates( $attachment ) {
 				</div>
 			<# } else { #>
 				<img src="{{ data.icon }}" class="icon" draggable="false" />
-				<div class="filename">{{ data.filename }}</div>
+				<div class="filename">
+					<div>{{ data.filename }}</div>
+				</div>
 			<# } #>
 
 			<# if ( data.buttons.close ) { #>
-				<a class="close button" href="#">&times;</a>
+				<a class="close media-modal-icon" href="#" title="<?php _e('Remove'); ?>"></a>
 			<# } #>
 
 			<# if ( data.buttons.check ) { #>
-				<a class="check" href="#"><span>&#10003;</span><span class="dash">&ndash;</span></a>
+				<a class="check" href="#" title="<?php _e('Deselect'); ?>"><div class="media-modal-icon"></div></a>
 			<# } #>
 		</div>
 		<# if ( data.describe ) { #>
@@ -1470,6 +1661,11 @@ function wp_print_media_templates( $attachment ) {
 				<div class="uploaded">{{ data.dateFormatted }}</div>
 				<# if ( 'image' === data.type && ! data.uploading ) { #>
 					<div class="dimensions">{{ data.width }} &times; {{ data.height }}</div>
+				<# } #>
+				<# if ( ! data.uploading ) { #>
+					<div class="delete-attachment">
+						<a href="#"><?php _e( 'Delete Permanently' ); ?></a>
+					</div>
 				<# } #>
 			</div>
 			<div class="compat-meta">
@@ -1741,4 +1937,6 @@ function wp_print_media_templates( $attachment ) {
 		</style>
 	</script>
 	<?php
+
+	do_action( 'print_media_templates' );
 }

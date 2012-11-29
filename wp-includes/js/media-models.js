@@ -191,6 +191,18 @@ window.wp = window.wp || {};
 					height: height
 				};
 			}
+		},
+
+		// Truncates a string by injecting an ellipsis into the middle.
+		// Useful for filenames.
+		truncate: function( string, length, replacement ) {
+			length = length || 30;
+			replacement = replacement || '&hellip;';
+
+			if ( string.length <= length )
+				return string;
+
+			return string.substr( 0, length / 2 ) + replacement + string.substr( -1 * length / 2 );
 		}
 	});
 
@@ -206,6 +218,11 @@ window.wp = window.wp || {};
 	 */
 	Attachment = media.model.Attachment = Backbone.Model.extend({
 		sync: function( method, model, options ) {
+			// If the attachment does not yet have an `id`, return an instantly
+			// rejected promise. Otherwise, all of our requests will fail.
+			if ( _.isUndefined( this.id ) )
+				return $.Deferred().reject().promise();
+
 			// Overload the `read` request so Attachment.fetch() functions correctly.
 			if ( 'read' === method ) {
 				options = options || {};
@@ -223,9 +240,10 @@ window.wp = window.wp || {};
 
 				// Set the action and ID.
 				options.data = _.extend( options.data || {}, {
-					action: 'save-attachment',
-					id:     this.id,
-					nonce:  media.model.settings.saveAttachmentNonce
+					action:  'save-attachment',
+					id:      this.id,
+					nonce:   this.get('nonces').update,
+					post_id: media.model.settings.postId
 				});
 
 				// Record the values of the changed attributes.
@@ -238,6 +256,18 @@ window.wp = window.wp || {};
 					delete options.changes;
 				}
 
+				return media.ajax( options );
+
+			// Overload the `delete` request so attachments can be removed.
+			// This will permanently delete an attachment.
+			} else if ( 'delete' === method ) {
+				options = options || {};
+				options.context = this;
+				options.data = _.extend( options.data || {}, {
+					action:   'delete-post',
+					id:       this.id,
+					_wpnonce: this.get('nonces')['delete']
+				});
 				return media.ajax( options );
 			}
 		},
@@ -256,8 +286,9 @@ window.wp = window.wp || {};
 			var model = this;
 
 			return media.post( 'save-attachment-compat', _.defaults({
-				id:     this.id,
-				nonce:  l10n.saveAttachmentNonce
+				id:      this.id,
+				nonce:   this.get('nonces').update,
+				post_id: media.model.settings.postId
 			}, data ) ).done( function( resp, status, xhr ) {
 				model.set( model.parse( resp, xhr ), options );
 			});
@@ -597,7 +628,8 @@ window.wp = window.wp || {};
 				options = options || {};
 				options.context = this;
 				options.data = _.extend( options.data || {}, {
-					action: 'query-attachments'
+					action:  'query-attachments',
+					post_id: media.model.settings.postId
 				});
 
 				// Clone the args so manipulation is non-destructive.
@@ -627,18 +659,20 @@ window.wp = window.wp || {};
 		},
 
 		orderby: {
-			allowed:  [ 'name', 'author', 'date', 'title', 'modified', 'uploadedTo', 'id', 'post__in' ],
+			allowed:  [ 'name', 'author', 'date', 'title', 'modified', 'uploadedTo', 'id', 'post__in', 'menuOrder' ],
 			valuemap: {
 				'id':         'ID',
-				'uploadedTo': 'parent'
+				'uploadedTo': 'parent',
+				'menuOrder':  'menu_order ID'
 			}
 		},
 
 		propmap: {
-			'search':  's',
-			'type':    'post_mime_type',
-			'parent':  'post_parent',
-			'perPage': 'posts_per_page'
+			'search':    's',
+			'type':      'post_mime_type',
+			'parent':    'post_parent',
+			'perPage':   'posts_per_page',
+			'menuOrder': 'menu_order'
 		},
 
 		// Caches query objects so queries can be easily reused.
@@ -766,15 +800,20 @@ window.wp = window.wp || {};
 
 			// If single has changed, fire an event.
 			if ( this._single !== previous ) {
-				if ( this._single )
-					this._single.trigger( 'selection:single', this._single, this );
 				if ( previous )
 					previous.trigger( 'selection:unsingle', previous, this );
+				if ( this._single )
+					this._single.trigger( 'selection:single', this._single, this );
 			}
 
 			// Return the single model, or the last model as a fallback.
 			return this._single;
 		}
+	});
+
+	// Clean up. Prevents mobile browsers caching
+	$(window).on('unload', function(){
+		window.wp = null;
 	});
 
 }(jQuery));
