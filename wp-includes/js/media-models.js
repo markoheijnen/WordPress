@@ -31,7 +31,7 @@ window.wp = window.wp || {};
 
 		delete attributes.frame;
 		// Set the default state.
-		frame.state( frame.options.state );
+		frame.setState( frame.options.state );
 		// Render, attach, and open the frame.
 		return frame.render().attach().open();
 	};
@@ -316,11 +316,11 @@ window.wp = window.wp || {};
 			this.filters = options.filters || {};
 
 			// Bind default `change` events to the `props` model.
+			this.props.on( 'change', this._changeFilteredProps, this );
+
 			this.props.on( 'change:order',   this._changeOrder,   this );
 			this.props.on( 'change:orderby', this._changeOrderby, this );
 			this.props.on( 'change:query',   this._changeQuery,   this );
-			this.props.on( 'change:search',  this._changeSearch,  this );
-			this.props.on( 'change:type',    this._changeType,    this );
 
 			// Set the `props` model and fill the default property values.
 			this.props.set( _.defaults( options.props || {} ) );
@@ -359,16 +359,32 @@ window.wp = window.wp || {};
 			}
 		},
 
-		_changeFilteredProp: function( prop, model, term ) {
+		_changeFilteredProps: function( model, options ) {
 			// If this is a query, updating the collection will be handled by
 			// `this._requery()`.
 			if ( this.props.get('query') )
 				return;
 
-			if ( term && ! this.filters[ prop ] )
-				this.filters[ prop ] = Attachments.filters[ prop ];
-			else if ( ! term && this.filters[ prop ] === Attachments.filters[ prop ] )
-				delete this.filters[ prop ];
+			var changed = _.chain( options.changes ).map( function( t, prop ) {
+				var filter = Attachments.filters[ prop ],
+					term = model.get( prop );
+
+				if ( ! filter )
+					return;
+
+				if ( term && ! this.filters[ prop ] )
+					this.filters[ prop ] = filter;
+				else if ( ! term && this.filters[ prop ] === filter )
+					delete this.filters[ prop ];
+				else
+					return;
+
+				// Record the change.
+				return true;
+			}, this ).any().value();
+
+			if ( ! changed )
+				return;
 
 			// If no `Attachments` model is provided to source the searches
 			// from, then automatically generate a source from the existing
@@ -377,14 +393,6 @@ window.wp = window.wp || {};
 				this._source = new Attachments( this.models );
 
 			this.reset( this._source.filter( this.validator, this ) );
-		},
-
-		_changeSearch: function( model, term ) {
-			return this._changeFilteredProp( 'search', model, term );
-		},
-
-		_changeType: function( model, term ) {
-			return this._changeFilteredProp( 'type', model, term );
 		},
 
 		validator: function( attachment ) {
@@ -482,9 +490,27 @@ window.wp = window.wp || {};
 		},
 
 		more: function( options ) {
-			if ( this.mirroring && this.mirroring.more )
-				return this.mirroring.more( options );
-			return $.Deferred().resolve().promise();
+			var deferred = $.Deferred(),
+				mirroring = this.mirroring,
+				attachments = this;
+
+			if ( ! mirroring || ! mirroring.more )
+				return deferred.resolveWith( this ).promise();
+
+			// If we're mirroring another collection, forward `more` to
+			// the mirrored collection. Account for a race condition by
+			// checking if we're still mirroring that collection when
+			// the request resolves.
+			mirroring.more( options ).done( function() {
+				if ( this === attachments.mirroring )
+					deferred.resolveWith( this );
+			});
+
+			return deferred.promise();
+		},
+
+		hasMore: function() {
+			return this.mirroring ? this.mirroring.hasMore() : false;
 		},
 
 		parse: function( resp, xhr ) {
@@ -499,7 +525,7 @@ window.wp = window.wp || {};
 				this.mirror( Query.get( this.props.toJSON() ) );
 		}
 	}, {
-		comparator: function( a, b ) {
+		comparator: function( a, b, options ) {
 			var key   = this.props.get('orderby'),
 				order = this.props.get('order') || 'DESC',
 				ac    = a.cid,
@@ -512,6 +538,10 @@ window.wp = window.wp || {};
 				a = a || new Date();
 				b = b || new Date();
 			}
+
+			// If `options.ties` is set, don't enforce the `cid` tiebreaker.
+			if ( options && options.ties )
+				ac = bc = null;
 
 			return ( 'DESC' === order ) ? compare( a, b, ac, bc ) : compare( b, a, bc, ac );
 		},
@@ -531,10 +561,15 @@ window.wp = window.wp || {};
 
 			type: function( attachment ) {
 				var type = this.props.get('type');
-				if ( ! type )
+				return ! type || -1 !== type.indexOf( attachment.get('type') );
+			},
+
+			uploadedTo: function( attachment ) {
+				var uploadedTo = this.props.get('uploadedTo');
+				if ( _.isUndefined( uploadedTo ) )
 					return true;
 
-				return -1 !== type.indexOf( attachment.get('type') );
+				return uploadedTo === attachment.get('uploadedTo');
 			}
 		}
 	});
@@ -566,11 +601,14 @@ window.wp = window.wp || {};
 			options = options || {};
 			Attachments.prototype.initialize.apply( this, arguments );
 
-			this.args    = options.args;
-			this.hasMore = true;
-			this.created = new Date();
+			this.args     = options.args;
+			this._hasMore = true;
+			this.created  = new Date();
 
 			this.filters.order = function( attachment ) {
+				var orderby = this.props.get('orderby'),
+					order = this.props.get('order');
+
 				if ( ! this.comparator )
 					return true;
 
@@ -578,13 +616,18 @@ window.wp = window.wp || {};
 				// item in the set. If we add any items after the last
 				// item, then we can't guarantee the set is complete.
 				if ( this.length ) {
-					return 1 !== this.comparator( attachment, this.last() );
+					return 1 !== this.comparator( attachment, this.last(), { ties: true });
 
 				// Handle the case where there are no items yet and
 				// we're sorting for recent items. In that case, we want
 				// changes that occurred after we created the query.
-				} else if ( 'DESC' === this.args.order && ( 'date' === this.args.orderby || 'modified' === this.args.orderby ) ) {
-					return attachment.get( this.args.orderby ) >= this.created;
+				} else if ( 'DESC' === order && ( 'date' === orderby || 'modified' === orderby ) ) {
+					return attachment.get( orderby ) >= this.created;
+
+				// If we're sorting by menu order and we have no items,
+				// accept any items that have the default menu order (0).
+				} else if ( 'ASC' === order && 'menuOrder' === orderby ) {
+					return attachment.get( orderby ) === 0;
 				}
 
 				// Otherwise, we don't want any items yet.
@@ -597,9 +640,13 @@ window.wp = window.wp || {};
 			// Only observe when a limited number of query args are set. There
 			// are no filters for other properties, so observing will result in
 			// false positives in those queries.
-			allowed = [ 's', 'order', 'orderby', 'posts_per_page', 'post_mime_type' ];
+			allowed = [ 's', 'order', 'orderby', 'posts_per_page', 'post_mime_type', 'post_parent' ];
 			if ( wp.Uploader && _( this.args ).chain().keys().difference( allowed ).isEmpty().value() )
 				this.observe( wp.Uploader.queue );
+		},
+
+		hasMore: function() {
+			return this._hasMore;
 		},
 
 		more: function( options ) {
@@ -608,15 +655,15 @@ window.wp = window.wp || {};
 			if ( this._more && 'pending' === this._more.state() )
 				return this._more;
 
-			if ( ! this.hasMore )
-				return $.Deferred().resolve().promise();
+			if ( ! this.hasMore() )
+				return $.Deferred().resolveWith( this ).promise();
 
 			options = options || {};
 			options.add = true;
 
 			return this._more = this.fetch( options ).done( function( resp ) {
 				if ( _.isEmpty( resp ) || -1 === this.args.posts_per_page || resp.length < this.args.posts_per_page )
-					query.hasMore = false;
+					query._hasMore = false;
 			});
 		},
 
@@ -670,9 +717,9 @@ window.wp = window.wp || {};
 		propmap: {
 			'search':    's',
 			'type':      'post_mime_type',
-			'parent':    'post_parent',
 			'perPage':   'posts_per_page',
-			'menuOrder': 'menu_order'
+			'menuOrder': 'menu_order',
+			'uploadedTo': 'post_parent'
 		},
 
 		// Caches query objects so queries can be easily reused.

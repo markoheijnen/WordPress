@@ -9,7 +9,18 @@
 		// outputting the proper object format based on the
 		// attachment's type.
 		props: function( props, attachment ) {
-			var link, linkUrl, size, sizes;
+			var link, linkUrl, size, sizes, fallbacks;
+
+			// Final fallbacks run after all processing has been completed.
+			fallbacks = function( props ) {
+				// Generate alt fallbacks and strip tags.
+				if ( 'image' === props.type && ! props.alt ) {
+					props.alt = props.caption || props.title || '';
+					props.alt = props.alt.replace( /<\/?[^>]+>/g, '' );
+				}
+
+				return props;
+			};
 
 			props = props ? _.clone( props ) : {};
 
@@ -27,7 +38,9 @@
 
 			// All attachment-specific settings follow.
 			if ( ! attachment )
-				return props;
+				return fallbacks( props );
+
+			props.title = props.title || attachment.title;
 
 			link = props.link || getUserSetting( 'urlbutton', 'post' );
 			if ( 'file' === link )
@@ -45,7 +58,7 @@
 				sizes = attachment.sizes;
 				size = sizes && sizes[ props.size ] ? sizes[ props.size ] : attachment;
 
-				_.extend( props, _.pick( attachment, 'align', 'caption' ), {
+				_.extend( props, _.pick( attachment, 'align', 'caption', 'alt' ), {
 					width:     size.width,
 					height:    size.height,
 					src:       size.url,
@@ -54,13 +67,11 @@
 
 			// Format properties for non-images.
 			} else {
-				_.extend( props, {
-					title:   attachment.title || attachment.filename,
-					rel:     'attachment wp-att-' + attachment.id
-				});
+				props.title = props.title || attachment.filename;
+				props.rel = props.rel || 'attachment wp-att-' + attachment.id;
 			}
 
-			return props;
+			return fallbacks( props );
 		},
 
 		link: function( props, attachment ) {
@@ -194,7 +205,7 @@
 					args.post__not_in = attrs.exclude.split(',');
 
 				if ( ! args.post__in )
-					args.parent = attrs.id;
+					args.uploadedTo = attrs.id;
 
 				// Collect the attributes that were not included in `args`.
 				others = _.omit( attrs, 'id', 'ids', 'include', 'exclude', 'orderby', 'order' );
@@ -217,9 +228,9 @@
 				// the collection will already reflect those properties.
 				attrs.ids = attachments.pluck('id');
 
-				// Copy the `parent` post ID.
-				if ( props.parent )
-					attrs.id = props.parent;
+				// Copy the `uploadedTo` post ID.
+				if ( props.uploadedTo )
+					attrs.id = props.uploadedTo;
 
 				// If the `ids` attribute is set and `orderby` attribute
 				// is the default value, clear it for cleaner output.
@@ -382,11 +393,11 @@
 				}, this );
 			}, this );
 
-			workflow.get('gallery-edit').on( 'update', function( selection ) {
+			workflow.state('gallery-edit').on( 'update', function( selection ) {
 				this.insert( wp.media.gallery.shortcode( selection ).string() );
 			}, this );
 
-			workflow.get('embed').on( 'select', function() {
+			workflow.state('embed').on( 'select', function() {
 				var embed = workflow.state().toJSON();
 
 				embed.url = embed.url || '';
@@ -520,8 +531,10 @@
 				}
 
 				// Save a bookmark of the caret position, needed for IE
-				if ( tinymce.isIE && editor && ! editor.isHidden() )
+				if ( tinymce.isIE && editor && ! editor.isHidden() ) {
+					editor.focus();
 					editor.windowManager.insertimagebookmark = editor.selection.getBookmark();
+				}
 			}
 
 			// Last but not least, fall back to the empty string.

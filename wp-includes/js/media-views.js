@@ -143,30 +143,27 @@
 	// Add events to the `StateMachine`.
 	_.extend( media.controller.StateMachine.prototype, Backbone.Events, {
 
-		// Fetch a state model.
+		// Fetch a state.
+		//
+		// If no `id` is provided, returns the active state.
 		//
 		// Implicitly creates states.
-		get: function( id ) {
+		state: function( id ) {
 			// Ensure that the `states` collection exists so the `StateMachine`
 			// can be used as a mixin.
 			this.states = this.states || new Backbone.Collection();
 
-			if ( ! this.states.get( id ) )
+			// Default to the active state.
+			id = id || this._state;
+
+			if ( id && ! this.states.get( id ) )
 				this.states.add({ id: id });
 			return this.states.get( id );
 		},
 
-		// Selects or returns the active state.
-		//
-		// If a `id` is provided, sets that as the current state.
-		// If no parameters are provided, returns the current state object.
-		state: function( id ) {
-			var previous;
-
-			if ( ! id )
-				return this._state ? this.get( this._state ) : null;
-
-			previous = this.state();
+		// Sets the active state.
+		setState: function( id ) {
+			var previous = this.state();
 
 			// Bail if we're trying to select the current state, if we haven't
 			// created the `states` collection, or are trying to select a state
@@ -176,15 +173,20 @@
 
 			if ( previous ) {
 				previous.trigger('deactivate');
-				this._previous = previous.id;
+				this._lastState = previous.id;
 			}
 
 			this._state = id;
 			this.state().trigger('activate');
 		},
 
-		previous: function() {
-			return this._previous;
+		// Returns the previous active state.
+		//
+		// Call the `state()` method with no parameters to retrieve the current
+		// active state.
+		lastState: function() {
+			if ( this._lastState )
+				return this.state( this._lastState );
 		}
 	});
 
@@ -262,6 +264,7 @@
 			describe:   false,
 			toolbar:    'main-attachments',
 			sidebar:    'settings',
+			content:    'browse',
 			searchable: true,
 			filterable: false,
 			uploads:    true
@@ -304,19 +307,11 @@
 
 			selection.on( 'add remove reset', this.refreshSelection, this );
 
-			this._updateEmpty();
-			library.on( 'add remove reset', this._updateEmpty, this );
-			this.on( 'change:empty', this.refresh, this );
 			this.refresh();
-
-
 			this.on( 'insert', this._insertDisplaySettings, this );
 		},
 
 		deactivate: function() {
-			this.off( 'change:empty', this.refresh, this );
-			this.get('library').off( 'add remove reset', this._updateEmpty, this );
-
 			// Unbind all event handlers that use this state as the context
 			// from the selection.
 			this.get('selection').off( null, null, this );
@@ -334,23 +329,7 @@
 			this.resetDisplays();
 		},
 
-		content: function() {
-			var frame = this.frame;
-
-			if ( this.get('empty') ) {
-				// Attempt to fetch any Attachments we don't already have.
-				this.get('library').more();
-
-				// In the meantime, render an inline uploader.
-				frame.content.mode('upload');
-			} else {
-				// Browse our library of attachments.
-				frame.content.mode('browse');
-			}
-		},
-
 		refresh: function() {
-			this.frame.$el.toggleClass( 'hide-toolbar', this.get('empty') );
 			this.content();
 			this.refreshSelection();
 		},
@@ -387,17 +366,6 @@
 			setUserSetting( 'align', display.align );
 			setUserSetting( 'imgsize', display.size );
 			setUserSetting( 'urlbutton', display.link );
-		},
-
-		_updateEmpty: function() {
-			var library = this.get('library'),
-				props = library.props;
-
-			// If we're filtering the library, bail.
-			if ( this.get('filterable') && ( props.get('type') || props.get('parent') ) )
-				return;
-
-			this.set( 'empty', ! library.length && ! library.props.get('search') );
 		},
 
 		refreshSelection: function() {
@@ -461,10 +429,10 @@
 				previous = this.previous('excludeState');
 
 			if ( previous )
-				this.frame.get( previous ).off( 'change:library', this._excludeStateLibrary, this );
+				this.frame.state( previous ).off( 'change:library', this._excludeStateLibrary, this );
 
 			if ( current )
-				this.frame.get( current ).on( 'change:library', this._excludeStateLibrary, this );
+				this.frame.state( current ).on( 'change:library', this._excludeStateLibrary, this );
 		},
 
 		_excludeStateLibrary: function() {
@@ -473,7 +441,7 @@
 			if ( ! current )
 				return;
 
-			this.set( 'exclude', this.frame.get( current ).get('library') );
+			this.set( 'exclude', this.frame.state( current ).get('library') );
 		}
 	});
 
@@ -508,8 +476,8 @@
 		uploading: function( attachment ) {
 			var library = this.get('libraryState');
 
-			this.frame.get( library ).get('selection').add( attachment );
-			this.frame.state( library );
+			this.frame.state( library ).get('selection').add( attachment );
+			this.frame.setState( library );
 		}
 	});
 
@@ -524,7 +492,8 @@
 			editing:    false,
 			sortable:   true,
 			searchable: false,
-			toolbar:    'gallery-edit'
+			toolbar:    'gallery-edit',
+			content:    'browse'
 		},
 
 		initialize: function() {
@@ -1099,6 +1068,9 @@
 				uploader: true
 			});
 
+			// Ensure core UI is enabled.
+			this.$el.addClass('wp-core-ui');
+
 			// Initialize modal container view.
 			if ( this.options.modal ) {
 				this.modal = new media.view.Modal({
@@ -1152,7 +1124,7 @@
 
 			// Generate the tab states.
 			_.each( tabs, function( title, id ) {
-				var frame = this.get( 'iframe:' + id ).set( _.defaults({
+				var frame = this.state( 'iframe:' + id ).set( _.defaults({
 					tab:     id,
 					src:     tabUrl + '&tab=' + id,
 					title:   title,
@@ -1179,7 +1151,7 @@
 
 			_.each( media.view.settings.tabs, function( title, id ) {
 				views[ 'iframe:' + id ] = {
-					text: this.get( 'iframe:' + id ).get('title'),
+					text: this.state( 'iframe:' + id ).get('title'),
 					priority: 200
 				};
 			}, this );
@@ -1197,7 +1169,7 @@
 			window.tb_remove = function() {
 				frame.close();
 				frame.reset();
-				frame.state( frame.options.state );
+				frame.setState( frame.options.state );
 				frame._tb_remove.call( window );
 			};
 		},
@@ -1216,7 +1188,6 @@
 		media.view.MediaFrame.prototype[ method ] = function( view ) {
 			if ( this.modal )
 				this.modal[ method ].apply( this.modal, arguments );
-			this.trigger( method );
 			return this;
 		};
 	});
@@ -1302,6 +1273,8 @@
 		browseContent: function() {
 			var state = this.state();
 
+			this.$el.removeClass('hide-toolbar');
+
 			// Browse our library of attachments.
 			this.content.view( new media.view.AttachmentsBrowser({
 				controller: this,
@@ -1351,7 +1324,7 @@
 							controller.state().trigger( options.event );
 							controller.reset();
 							if ( options.state )
-								controller.state( options.state );
+								controller.setState( options.state );
 						}
 					}
 				}
@@ -1481,7 +1454,8 @@
 		},
 
 		galleryMenu: function() {
-			var previous = this.previous(),
+			var lastState = this.lastState(),
+				previous = lastState && lastState.id,
 				frame = this;
 
 			this.menu.view( new media.view.Menu({
@@ -1492,7 +1466,7 @@
 						priority: 20,
 						click:    function() {
 							if ( previous )
-								frame.state( previous );
+								frame.setState( previous );
 							else
 								frame.close();
 						}
@@ -1610,7 +1584,7 @@
 
 							controller.reset();
 							// @todo: Make the state activated dynamic (instead of hardcoded).
-							controller.state('upload');
+							controller.setState('upload');
 						}
 					}
 				}
@@ -1629,7 +1603,7 @@
 						click: function() {
 							var controller = this.controller,
 								state = controller.state(),
-								edit = controller.get('gallery-edit');
+								edit = controller.state('gallery-edit');
 
 							edit.get('library').add( state.get('selection').models );
 							state.trigger('reset');
@@ -1648,8 +1622,13 @@
 		tagName:  'div',
 		template: media.template('media-modal'),
 
+		attributes: {
+			tabindex: 0
+		},
+
 		events: {
-			'click .media-modal-backdrop, .media-modal-close' : 'closeHandler'
+			'click .media-modal-backdrop, .media-modal-close': 'closeHandler',
+			'keydown': 'keydown'
 		},
 
 		initialize: function() {
@@ -1657,7 +1636,8 @@
 
 			_.defaults( this.options, {
 				container: document.body,
-				title:     ''
+				title:     '',
+				propagate: true
 			});
 		},
 
@@ -1680,26 +1660,22 @@
 
 		attach: function() {
 			this.$el.appendTo( this.options.container );
-			this.trigger('attach');
-			return this;
+			return this.propagate('attach');
 		},
 
 		detach: function() {
 			this.$el.detach();
-			this.trigger('detach');
-			return this;
+			return this.propagate('detach');
 		},
 
 		open: function() {
-			this.$el.show();
-			this.trigger('open');
-			return this;
+			this.$el.show().focus();
+			return this.propagate('open');
 		},
 
 		close: function() {
 			this.$el.hide();
-			this.trigger('close');
-			return this;
+			return this.propagate('close');
 		},
 
 		closeHandler: function( event ) {
@@ -1715,6 +1691,26 @@
 			// Set and render the content.
 			this.options.$content = ( $content instanceof Backbone.View ) ? $content.$el : $content;
 			return this.render();
+		},
+
+		// Triggers a modal event and if the `propagate` option is set,
+		// forwards events to the modal's controller.
+		propagate: function( id ) {
+			this.trigger( id );
+
+			if ( this.options.propagate )
+				this.controller.trigger( id );
+
+			return this;
+		},
+
+		keydown: function( event ) {
+			// Close the modal when escape is pressed.
+			if ( 27 === event.which ) {
+				event.preventDefault();
+				this.close();
+				return;
+			}
 		}
 	});
 
@@ -2076,7 +2072,7 @@
 				controller.reset();
 
 			if ( options.state )
-				controller.state( options.state );
+				controller.setState( options.state );
 		}
 	});
 
@@ -2112,7 +2108,7 @@
 				return function() {
 					var controller = this.controller,
 						selection = controller.state().get('selection'),
-						edit = controller.get( state ),
+						edit = controller.state( state ),
 						models = filter ? filter( selection ) : selection.models;
 
 					edit.set( 'library', new media.model.Selection( models, {
@@ -2120,7 +2116,7 @@
 						multiple: true
 					}) );
 
-					this.controller.state( state );
+					this.controller.setState( state );
 				};
 			};
 
@@ -2385,7 +2381,7 @@
 			if ( options.click )
 				options.click.call( this );
 			else if ( options.state )
-				this.controller.state( options.state );
+				this.controller.setState( options.state );
 		},
 
 		render: function() {
@@ -2825,7 +2821,7 @@
 			if ( ! this.$el.is(':visible') )
 				return;
 
-			if ( this.el.scrollHeight < this.el.scrollTop + ( this.el.clientHeight * this.options.refreshThreshold ) ) {
+			if ( this.collection.hasMore() && this.el.scrollHeight < this.el.scrollTop + ( this.el.clientHeight * this.options.refreshThreshold ) ) {
 				this.collection.more().done( this.scroll );
 			}
 		}
@@ -2927,7 +2923,7 @@
 			all: {
 				text:  l10n.allMediaItems,
 				props: {
-					parent:  null,
+					uploadedTo: null,
 					orderby: 'date',
 					order:   'DESC'
 				},
@@ -2937,7 +2933,7 @@
 			uploaded: {
 				text:  l10n.uploadedToThisPost,
 				props: {
-					parent:  media.view.settings.postId,
+					uploadedTo: media.view.settings.postId,
 					orderby: 'menuOrder',
 					order:   'ASC'
 				},
@@ -2955,7 +2951,7 @@
 					text: text,
 					props: {
 						type:    key,
-						parent:  null,
+						uploadedTo: null,
 						orderby: 'date',
 						order:   'DESC'
 					}
@@ -2966,7 +2962,7 @@
 				text:  l10n.allMediaItems,
 				props: {
 					type:    null,
-					parent:  null,
+					uploadedTo: null,
 					orderby: 'date',
 					order:   'DESC'
 				},
@@ -2977,7 +2973,7 @@
 				text:  l10n.uploadedToThisPost,
 				props: {
 					type:    null,
-					parent:  media.view.settings.postId,
+					uploadedTo: media.view.settings.postId,
 					orderby: 'menuOrder',
 					order:   'ASC'
 				},
@@ -3010,8 +3006,10 @@
 			});
 
 			this.createToolbar();
-			this.createAttachments();
+			this.updateContent();
 			this.createSidebar();
+
+			this.collection.on( 'add remove reset', this.updateContent, this );
 		},
 
 		dispose: function() {
@@ -3059,7 +3057,42 @@
 			}
 		},
 
+		updateContent: function() {
+			var view = this;
+
+			if( ! this.attachments )
+				this.createAttachments();
+
+			if ( ! this.collection.length ) {
+				this.collection.more().done( function() {
+					if ( ! view.collection.length )
+						view.createUploader();
+				});
+			}
+		},
+
+		removeContent: function() {
+			_.each(['attachments','uploader'], function( key ) {
+				if ( this[ key ] ) {
+					this[ key ].remove();
+					delete this[ key ];
+				}
+			}, this );
+		},
+
+		createUploader: function() {
+			this.removeContent();
+
+			this.uploader = new media.view.UploaderInline({
+				controller: this.controller
+			});
+
+			this.views.add( this.uploader );
+		},
+
 		createAttachments: function() {
+			this.removeContent();
+
 			this.attachments = new media.view.Attachments({
 				controller: this.controller,
 				collection: this.collection,

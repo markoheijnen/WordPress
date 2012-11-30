@@ -726,7 +726,8 @@
 	margin-top: 10px;
 }
 
-.attachments-browser .attachments {
+.attachments-browser .attachments,
+.attachments-browser .uploader-inline {
 	position: absolute;
 	top: 50px;
 	left: 0;
@@ -789,7 +790,9 @@
 
 .media-uploader-status {
 	position: relative;
+	margin: 0 auto;
 	padding-bottom: 10px;
+	max-width: 400px;
 }
 
 .media-sidebar .media-uploader-status {
@@ -841,7 +844,6 @@
 }
 
 .upload-errors .upload-error {
-	max-width: 400px;
 	margin: 8px auto 0 auto;
 	padding: 8px;
 	border: 1px #c00 solid;
@@ -867,6 +869,7 @@
 	display: block;
 	padding-top: 8px;
 	color: #b44;
+	word-wrap: break-word;
 }
 
 .uploader-window {
@@ -931,7 +934,7 @@
 	display: block;
 }
 
-.region-content.uploader-inline {
+.media-frame .uploader-inline {
 	margin: 20px;
 	padding: 20px;
 	text-align: center;
@@ -1373,6 +1376,7 @@
 	}
 
 	.attachments-browser .attachments,
+	.attachments-browser .uploader-inline,
 	.attachments-browser .media-toolbar {
 		right: 180px;
 	}

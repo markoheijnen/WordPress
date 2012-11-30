@@ -1388,7 +1388,7 @@ function wp_prepare_attachment_for_js( $attachment ) {
 	}
 
 	if ( function_exists('get_compat_media_markup') )
-		$response['compat'] = get_compat_media_markup( $attachment->ID, array( 'taxonomies' => true ) );
+		$response['compat'] = get_compat_media_markup( $attachment->ID, array( 'taxonomies' => true, 'description' => true ) );
 
 	return apply_filters( 'wp_prepare_attachment_for_js', $response, $attachment, $meta );
 }
@@ -1505,7 +1505,7 @@ function wp_print_media_templates() {
 	</script>
 
 	<script type="text/html" id="tmpl-media-modal">
-		<div class="media-modal">
+		<div class="media-modal wp-core-ui">
 			<h3 class="media-modal-title">{{ data.title }}</h3>
 			<a class="media-modal-close media-modal-icon" href="#" title="<?php esc_attr_e('Close'); ?>"></a>
 		</div>
