@@ -131,7 +131,7 @@ function wp_dashboard_setup() {
 	}
 
 	if ( 'POST' == $_SERVER['REQUEST_METHOD'] && isset($_POST['widget_id']) ) {
-		check_admin_referer( 'edit-dashboard-widget_' . $_POST['widget_id'] );
+		check_admin_referer( 'edit-dashboard-widget_' . $_POST['widget_id'], 'dashboard-widget-nonce' );
 		ob_start(); // hack - but the same hack wp-admin/widgets.php uses
 		wp_dashboard_trigger_widget_control( $_POST['widget_id'] );
 		ob_end_clean();
@@ -183,7 +183,7 @@ function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_
 function _wp_dashboard_control_callback( $dashboard, $meta_box ) {
 	echo '<form action="" method="post" class="dashboard-widget-control-form">';
 	wp_dashboard_trigger_widget_control( $meta_box['id'] );
-	wp_nonce_field( 'edit-dashboard-widget_' . $meta_box['id'] );
+	wp_nonce_field( 'edit-dashboard-widget_' . $meta_box['id'], 'dashboard-widget-nonce' );
 	echo '<input type="hidden" name="widget_id" value="' . esc_attr($meta_box['id']) . '" />';
 	submit_button( __('Submit') );
 	echo '</form>';
@@ -505,6 +505,16 @@ function wp_dashboard_quick_press() {
 	}
 
 	$post_ID = (int) $post->ID;
+
+	$media_settings = array(
+		'id' => $post->ID,
+		'nonce' => wp_create_nonce( 'update-post_' . $post->ID ),
+	);
+
+	if ( current_theme_supports( 'post-thumbnails', $post->post_type ) && post_type_supports( $post->post_type, 'thumbnail' ) ) {
+		$featured_image_id = get_post_meta( $post->ID, '_thumbnail_id', true );
+		$media_settings['featuredImageId'] = $featured_image_id ? $featured_image_id : -1;
+	}
 ?>
 
 	<form name="post" action="<?php echo esc_url( admin_url( 'post.php' ) ); ?>" method="post" id="quick-press">
@@ -524,7 +534,15 @@ function wp_dashboard_quick_press() {
 			<textarea name="content" id="content" class="mceEditor" rows="3" cols="15"><?php echo esc_textarea( $post->post_content ); ?></textarea>
 		</div>
 
-		<script type="text/javascript">edCanvas = document.getElementById('content');edInsertContent = null;</script>
+		<script type="text/javascript">
+		edCanvas = document.getElementById('content');
+		edInsertContent = null;
+		<?php if ( $_POST ) : ?>
+		wp.media.editor.remove('content');
+		wp.media.view.settings.post = <?php echo json_encode( $media_settings ); // big juicy hack. ?>;
+		wp.media.editor.add('content');
+		<?php endif; ?>
+		</script>
 
 		<div class="input-text-wrap" id="tags-input-wrap">
 			<label class="screen-reader-text prompt" for="tags-input" id="tags-input-prompt-text"><?php _e( 'Tags (separate with commas)' ); ?></label>

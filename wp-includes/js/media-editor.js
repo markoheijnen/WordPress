@@ -163,7 +163,7 @@
 		return {
 			defaults: {
 				order:      'ASC',
-				id:         wp.media.view.settings.postId,
+				id:         wp.media.view.settings.post.id,
 				itemtag:    'dl',
 				icontag:    'dt',
 				captiontag: 'dd',
@@ -189,6 +189,10 @@
 				args.type    = 'image';
 				args.perPage = -1;
 
+				// Mark the `orderby` override attribute.
+				if ( 'rand' === attrs.orderby )
+					attrs._orderbyRandom = true;
+
 				// Map the `orderby` attribute to the corresponding model property.
 				if ( ! attrs.orderby || /^menu_order(?: ID)?$/i.test( attrs.orderby ) )
 					args.orderby = 'menuOrder';
@@ -210,7 +214,7 @@
 				// Collect the attributes that were not included in `args`.
 				others = _.omit( attrs, 'id', 'ids', 'include', 'exclude', 'orderby', 'order' );
 
-				query = media.query( args );
+				query = wp.media.query( args );
 				query.gallery = new Backbone.Model( others );
 				return query;
 			},
@@ -231,6 +235,11 @@
 				// Copy the `uploadedTo` post ID.
 				if ( props.uploadedTo )
 					attrs.id = props.uploadedTo;
+
+				// Check if the gallery is randomly ordered.
+				if ( attrs._orderbyRandom )
+					attrs.orderby = 'rand';
+				delete attrs._orderbyRandom;
 
 				// If the `ids` attribute is set and `orderby` attribute
 				// is the default value, clear it for cleaner output.
@@ -304,7 +313,7 @@
 					editing:   true,
 					multiple:  true,
 					selection: selection
-				});
+				}).open();
 
 				return this.frame;
 			}
@@ -375,6 +384,7 @@
 
 			workflow = workflows[ id ] = wp.media( _.defaults( options || {}, {
 				frame:    'post',
+				state:    'insert',
 				title:    wp.media.view.l10n.addMedia,
 				multiple: true
 			} ) );
@@ -387,10 +397,12 @@
 				if ( ! selection )
 					return;
 
-				selection.each( function( attachment ) {
+				$.when.apply( $, selection.map( function( attachment ) {
 					var display = state.display( attachment ).toJSON();
-					this.send.attachment( display, attachment.toJSON() );
-				}, this );
+					return this.send.attachment( display, attachment.toJSON() );
+				}, this ) ).done( function() {
+					wp.media.editor.insert( _.toArray( arguments ).join('') );
+				});
 			}, this );
 
 			workflow.state('gallery-edit').on( 'update', function( selection ) {
@@ -398,19 +410,23 @@
 			}, this );
 
 			workflow.state('embed').on( 'select', function() {
-				var embed = workflow.state().toJSON();
+				var state = workflow.state(),
+					type = state.get('type'),
+					embed = state.props.toJSON();
 
 				embed.url = embed.url || '';
 
-				if ( 'link' === embed.type ) {
+				if ( 'link' === type ) {
 					_.defaults( embed, {
 						title:   embed.url,
 						linkUrl: embed.url
 					});
 
-					this.send.link( embed );
+					this.send.link( embed ).done( function( resp ) {
+						wp.media.editor.insert( resp );
+					});
 
-				} else if ( 'image' === embed.type ) {
+				} else if ( 'image' === type ) {
 					_.defaults( embed, {
 						title:   embed.url,
 						linkUrl: '',
@@ -427,14 +443,51 @@
 				}
 			}, this );
 
+			workflow.state('featured-image').on( 'select', function() {
+				var settings = wp.media.view.settings,
+					selection = this.get('selection').single();
+
+				if ( ! settings.post.featuredImageId )
+					return;
+
+				settings.post.featuredImageId = selection ? selection.id : -1;
+				wp.media.post( 'set-post-thumbnail', {
+					json:         true,
+					post_id:      settings.post.id,
+					thumbnail_id: settings.post.featuredImageId,
+					_wpnonce:     settings.post.nonce
+				}).done( function( html ) {
+					$( '.inside', '#postimagediv' ).html( html );
+				});
+			});
+
+			workflow.setState( workflow.options.state );
 			return workflow;
 		},
 
+		id: function( id ) {
+			if ( id )
+				return id;
+
+			// If an empty `id` is provided, default to `wpActiveEditor`.
+			id = wpActiveEditor;
+
+			// If that doesn't work, fall back to `tinymce.activeEditor.id`.
+			if ( ! id && typeof tinymce !== 'undefined' && tinymce.activeEditor )
+				id = tinymce.activeEditor.id;
+
+			// Last but not least, fall back to the empty string.
+			id = id || '';
+			return id;
+		},
+
 		get: function( id ) {
+			id = this.id( id );
 			return workflows[ id ];
 		},
 
 		remove: function( id ) {
+			id = this.id( id );
 			delete workflows[ id ];
 		},
 
@@ -474,27 +527,47 @@
 					options.post_title = props.title;
 				}
 
-				return media.post( 'send-attachment-to-editor', {
+				return wp.media.post( 'send-attachment-to-editor', {
 					nonce:      wp.media.view.settings.nonce.sendToEditor,
 					attachment: options,
 					html:       html,
-					post_id:    wp.media.view.settings.postId
-				}).done( function( resp ) {
-					wp.media.editor.insert( resp );
+					post_id:    wp.media.view.settings.post.id
 				});
 			},
 
 			link: function( embed ) {
-				return media.post( 'send-link-to-editor', {
+				return wp.media.post( 'send-link-to-editor', {
 					nonce:   wp.media.view.settings.nonce.sendToEditor,
 					src:     embed.linkUrl,
 					title:   embed.title,
 					html:    wp.media.string.link( embed ),
-					post_id: wp.media.view.settings.postId
-				}).done( function( resp ) {
-					wp.media.editor.insert( resp );
+					post_id: wp.media.view.settings.post.id
 				});
 			}
+		},
+
+		open: function( id ) {
+			var workflow, editor;
+
+			id = this.id( id );
+
+			// Save a bookmark of the caret position in IE.
+			if ( typeof tinymce !== 'undefined' ) {
+				editor = tinymce.get( id );
+
+				if ( tinymce.isIE && editor && ! editor.isHidden() ) {
+					editor.focus();
+					editor.windowManager.insertimagebookmark = editor.selection.getBookmark();
+				}
+			}
+
+			workflow = this.get( id );
+
+			// Initialize the editor's workflow if we haven't yet.
+			if ( ! workflow )
+				workflow = this.add( id );
+
+			return workflow.open();
 		},
 
 		init: function() {
@@ -513,45 +586,40 @@
 
 				wp.media.editor.open( editor );
 			});
-		},
 
-		open: function( id ) {
-			var workflow, editor;
+			// Open the content media manager to the 'featured image' tab when
+			// the post thumbnail is clicked.
+			$('#postimagediv').on( 'click', '#set-post-thumbnail', function( event ) {
+				event.preventDefault();
+				// Stop propagation to prevent thickbox from activating.
+				event.stopPropagation();
 
-			// If an empty `id` is provided, default to `wpActiveEditor`.
-			id = id || wpActiveEditor;
+				// Always get the 'content' frame, since this is tailored to post.php.
+				var frame = wp.media.editor.add('content'),
+					initialState = frame.state().id,
+					escape;
 
-			if ( typeof tinymce !== 'undefined' && tinymce.activeEditor ) {
-				// If that doesn't work, fall back to `tinymce.activeEditor`.
-				if ( ! id ) {
-					editor = tinymce.activeEditor;
-					id = id || editor.id;
-				} else {
-					editor = tinymce.get( id );
-				}
+				escape = function() {
+					// Only run this event once.
+					this.off( 'escape', escape );
 
-				// Save a bookmark of the caret position, needed for IE
-				if ( tinymce.isIE && editor && ! editor.isHidden() ) {
-					editor.focus();
-					editor.windowManager.insertimagebookmark = editor.selection.getBookmark();
-				}
-			}
+					// If we're still on the 'featured-image' state, restore
+					// the initial state.
+					if ( 'featured-image' === this.state().id )
+						this.setState( initialState );
+				};
 
-			// Last but not least, fall back to the empty string.
-			id = id || '';
+				frame.on( 'escape', escape, frame );
 
-			workflow = wp.media.editor.get( id );
+				frame.setState('featured-image').open();
 
-			// If the workflow exists, open it.
-			// Initialize the editor's workflow if we haven't yet.
-			if ( workflow )
-				workflow.open();
-			else
-				workflow = wp.media.editor.add( id );
-
-			return workflow;
+			// Update the featured image id when the 'remove' link is clicked.
+			}).on( 'click', '#remove-post-thumbnail', function() {
+				wp.media.view.settings.post.featuredImageId = -1;
+			});
 		}
 	};
 
+	_.bindAll( wp.media.editor, 'open' );
 	$( wp.media.editor.init );
 }(jQuery));

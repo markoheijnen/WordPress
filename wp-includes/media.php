@@ -670,8 +670,9 @@ function gallery_shortcode($attr) {
 	$instance++;
 
 	if ( ! empty( $attr['ids'] ) ) {
-		// 'ids' is explicitly ordered
-		$attr['orderby'] = 'post__in';
+		// 'ids' is explicitly ordered, unless you specify otherwise.
+		if ( empty( $attr['orderby'] ) )
+			$attr['orderby'] = 'post__in';
 		$attr['include'] = $attr['ids'];
 	}
 
@@ -1333,10 +1334,16 @@ function wp_prepare_attachment_for_js( $attachment ) {
 		'icon'        => wp_mime_type_icon( $attachment->ID ),
 		'dateFormatted' => mysql2date( get_option('date_format'), $attachment->post_date ),
 		'nonces'      => array(
-			'update' => wp_create_nonce( 'update-post_' . $attachment->ID ),
-			'delete' => wp_create_nonce( 'delete-post_' . $attachment->ID ),
+			'update' => false,
+			'delete' => false,
 		),
 	);
+
+	if ( current_user_can( 'edit_post', $attachment->ID ) )
+		$response['nonces']['update'] = wp_create_nonce( 'update-post_' . $attachment->ID );
+
+	if ( current_user_can( 'delete_post', $attachment->ID ) )
+		$response['nonces']['delete'] = wp_create_nonce( 'delete-post_' . $attachment->ID );
 
 	if ( $meta && 'image' === $type ) {
 		$sizes = array();
@@ -1426,13 +1433,23 @@ function wp_enqueue_media( $args = array() ) {
 		'nonce'     => array(
 			'sendToEditor' => wp_create_nonce( 'media-send-to-editor' ),
 		),
-		'postId'    => 0,
+		'post'    => array(
+			'id' => 0,
+		),
 	);
 
 	$post = null;
 	if ( isset( $args['post'] ) ) {
 		$post = get_post( $args['post'] );
-		$settings['postId'] = $post->ID;
+		$settings['post'] = array(
+			'id' => $post->ID,
+			'nonce' => wp_create_nonce( 'update-post_' . $post->ID ),
+		);
+
+		if ( current_theme_supports( 'post-thumbnails', $post->post_type ) && post_type_supports( $post->post_type, 'thumbnail' ) ) {
+			$featured_image_id = get_post_meta( $post->ID, '_thumbnail_id', true );
+			$settings['post']['featuredImageId'] = $featured_image_id ? $featured_image_id : -1;
+		}
 	}
 
 	$hier = $post && is_post_type_hierarchical( $post->post_type );
@@ -1444,21 +1461,20 @@ function wp_enqueue_media( $args = array() ) {
 		'search'      => __( 'Search' ),
 		'select'      => __( 'Select' ),
 		'cancel'      => __( 'Cancel' ),
-		'addImages'   => __( 'Add images' ),
 		'selected'    => __( 'selected' ),
 		'dragInfo'    => __( 'Drag and drop to reorder images.' ),
 
 		// Upload
 		'uploadFilesTitle'  => __( 'Upload Files' ),
-		'selectFiles'       => __( 'Select files' ),
 		'uploadImagesTitle' => __( 'Upload Images' ),
-		'uploadMoreFiles'   => __( 'Upload more files' ),
 
 		// Library
 		'mediaLibraryTitle'  => __( 'Media Library' ),
+		'insertMediaTitle'   => __( 'Insert Media' ),
 		'createNewGallery'   => __( 'Create a new gallery' ),
 		'returnToLibrary'    => __( '&#8592; Return to library' ),
 		'allMediaItems'      => __( 'All media items' ),
+		'noItemsFound'       => __( 'No items found.' ),
 		'insertIntoPost'     => $hier ? __( 'Insert into page' ) : __( 'Insert into post' ),
 		'uploadedToThisPost' => $hier ? __( 'Uploaded to this page' ) : __( 'Uploaded to this post' ),
 		'warnDelete' =>      __( "You are about to permanently delete this item.\n  'Cancel' to stop, 'OK' to delete." ),
@@ -1466,14 +1482,19 @@ function wp_enqueue_media( $args = array() ) {
 		// From URL
 		'fromUrlTitle'       => __( 'From URL' ),
 
+		// Featured Images
+		'featuredImageTitle'  => __( 'Featured Image' ),
+		'setFeaturedImage'    => __( 'Set featured image' ),
+
 		// Gallery
 		'createGalleryTitle' => __( 'Create Gallery' ),
 		'editGalleryTitle'   => __( 'Edit Gallery' ),
 		'cancelGalleryTitle' => __( '&#8592; Cancel Gallery' ),
 		'insertGallery'      => __( 'Insert gallery' ),
 		'updateGallery'      => __( 'Update gallery' ),
-		'continueEditing'    => __( 'Continue editing' ),
 		'addToGallery'       => __( 'Add to gallery' ),
+		'addToGalleryTitle'  => __( 'Add to Gallery' ),
+		'reverseOrder'       => __( 'Reverse order' ),
 	);
 
 	$settings = apply_filters( 'media_view_settings', $settings, $post );
@@ -1488,6 +1509,8 @@ function wp_enqueue_media( $args = array() ) {
 	wp_plupload_default_settings();
 	add_action( 'admin_footer', 'wp_print_media_templates' );
 	add_action( 'wp_footer', 'wp_print_media_templates' );
+
+	do_action( 'wp_enqueue_media' );
 }
 
 /**
@@ -1499,6 +1522,8 @@ function wp_print_media_templates() {
 	?>
 	<script type="text/html" id="tmpl-media-frame">
 		<div class="media-frame-menu"></div>
+		<div class="media-frame-title"></div>
+		<div class="media-frame-router"></div>
 		<div class="media-frame-content"></div>
 		<div class="media-frame-toolbar"></div>
 		<div class="media-frame-uploader"></div>
@@ -1506,12 +1531,10 @@ function wp_print_media_templates() {
 
 	<script type="text/html" id="tmpl-media-modal">
 		<div class="media-modal wp-core-ui">
-			<h3 class="media-modal-title">{{ data.title }}</h3>
-			<a class="media-modal-close media-modal-icon" href="#" title="<?php esc_attr_e('Close'); ?>"></a>
+			<a class="media-modal-close" href="#" title="<?php esc_attr_e('Close'); ?>"><span class="media-modal-icon"></span></a>
+			<div class="media-modal-content"></div>
 		</div>
-		<div class="media-modal-backdrop">
-			<div></div>
-		</div>
+		<div class="media-modal-backdrop"></div>
 	</script>
 
 	<script type="text/html" id="tmpl-uploader-window">
@@ -1521,16 +1544,20 @@ function wp_print_media_templates() {
 	</script>
 
 	<script type="text/html" id="tmpl-uploader-inline">
-		<div class="uploader-inline-content">
+		<# var messageClass = data.message ? 'has-upload-message' : 'no-upload-message'; #>
+		<div class="uploader-inline-content {{ messageClass }}">
+		<# if ( data.message ) { #>
+			<h3 class="upload-message">{{ data.message }}</h3>
+		<# } #>
 		<?php if ( ! _device_can_upload() ) : ?>
-			<h3><?php _e('The web browser on your device cannot be used to upload files. You may be able to use the <a href="http://wordpress.org/extend/mobile/">native app for your device</a> instead.'); ?></h3>
+			<h3 class="upload-instructions"><?php _e('The web browser on your device cannot be used to upload files. You may be able to use the <a href="http://wordpress.org/extend/mobile/">native app for your device</a> instead.'); ?></h3>
 		<?php elseif ( is_multisite() && ! is_upload_space_available() ) : ?>
-			<h3><?php _e( 'Upload Limit Exceeded' ); ?></h3>
+			<h3 class="upload-instructions"><?php _e( 'Upload Limit Exceeded' ); ?></h3>
 			<?php do_action( 'upload_ui_over_quota' ); ?>
 
 		<?php else : ?>
 			<div class="upload-ui">
-				<h3 class="drop-instructions"><?php _e( 'Drop files anywhere to upload' ); ?></h3>
+				<h3 class="upload-instructions drop-instructions"><?php _e( 'Drop files anywhere to upload' ); ?></h3>
 				<a href="#" class="browser button button-hero"><?php _e( 'Select Files' ); ?></a>
 			</div>
 
@@ -1645,7 +1672,14 @@ function wp_print_media_templates() {
 	</script>
 
 	<script type="text/html" id="tmpl-attachment-details">
-		<h3><?php _e('Attachment Details'); ?></h3>
+		<h3>
+			<?php _e('Attachment Details'); ?>
+
+			<span class="settings-save-status">
+				<span class="spinner"></span>
+				<span class="saved"><?php esc_html_e('Saved.'); ?></span>
+			</span>
+		</h3>
 		<div class="attachment-info">
 			<div class="thumbnail">
 				<# if ( data.uploading ) { #>
@@ -1659,19 +1693,19 @@ function wp_print_media_templates() {
 			<div class="details">
 				<div class="filename">{{ data.filename }}</div>
 				<div class="uploaded">{{ data.dateFormatted }}</div>
-				<# if ( 'image' === data.type && ! data.uploading ) { #>
+				<# if ( 'image' === data.type && ! data.uploading && data.width && data.height ) { #>
 					<div class="dimensions">{{ data.width }} &times; {{ data.height }}</div>
 				<# } #>
-				<# if ( ! data.uploading ) { #>
+				<# if ( ! data.uploading && data.can.remove ) { #>
 					<div class="delete-attachment">
 						<a href="#"><?php _e( 'Delete Permanently' ); ?></a>
 					</div>
 				<# } #>
-			</div>
-			<div class="compat-meta">
-				<# if ( data.compat && data.compat.meta ) { #>
-					{{{ data.compat.meta }}}
-				<# } #>
+				<div class="compat-meta">
+					<# if ( data.compat && data.compat.meta ) { #>
+						{{{ data.compat.meta }}}
+					<# } #>
+				</div>
 			</div>
 		</div>
 
@@ -1716,19 +1750,6 @@ function wp_print_media_templates() {
 			<# } #>
 		</div>
 		<div class="selection-view"></div>
-	</script>
-
-	<script type="text/html" id="tmpl-media-selection-preview">
-		<div class="selected-img selected-count-{{ data.count }}">
-			<# if ( data.thumbnail ) { #>
-				<img src="{{ data.thumbnail }}" draggable="false" />
-			<# } #>
-
-			<span class="count">{{ data.count }}</span>
-		</div>
-		<# if ( data.clearable ) { #>
-			<a class="clear-selection" href="#"><?php _e('Clear selection'); ?></a>
-		<# } #>
 	</script>
 
 	<script type="text/html" id="tmpl-attachment-display-settings">
@@ -1806,10 +1827,10 @@ function wp_print_media_templates() {
 						<#
 						var size = data.sizes['<?php echo esc_js( $value ); ?>'];
 						if ( size ) { #>
-							<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $value, 'medium' ); ?>>
+							<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $value, 'full' ); ?>>
 								<?php echo esc_html( $name ); ?> &ndash; {{ size.width }} &times; {{ size.height }}
 							</option>
-						<# } #>>
+						<# } #>
 					<?php endforeach; ?>
 				</select>
 			</label>
@@ -1846,6 +1867,11 @@ function wp_print_media_templates() {
 					</option>
 				<?php endfor; ?>
 			</select>
+		</label>
+
+		<label class="setting">
+			<span><?php _ex( 'Random', 'Gallery order' ); ?></span>
+			<input type="checkbox" data-setting="_orderbyRandom" />
 		</label>
 	</script>
 
@@ -1926,13 +1952,13 @@ function wp_print_media_templates() {
 			}
 
 			#{{ data.id }} .portrait .thumbnail img {
-				width: {{ data.edge }}px;
+				max-width: {{ data.edge }}px;
 				height: auto;
 			}
 
 			#{{ data.id }} .landscape .thumbnail img {
 				width: auto;
-				height: {{ data.edge }}px;
+				max-height: {{ data.edge }}px;
 			}
 		</style>
 	</script>

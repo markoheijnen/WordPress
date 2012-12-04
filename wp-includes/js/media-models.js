@@ -1,7 +1,7 @@
 window.wp = window.wp || {};
 
 (function($){
-	var Attachment, Attachments, Query, compare, l10n;
+	var Attachment, Attachments, Query, compare, l10n, media;
 
 	/**
 	 * wp.media( attributes )
@@ -30,10 +30,8 @@ window.wp = window.wp || {};
 			frame = new MediaFrame.Post( attributes );
 
 		delete attributes.frame;
-		// Set the default state.
-		frame.setState( frame.options.state );
-		// Render, attach, and open the frame.
-		return frame.render().attach().open();
+
+		return frame;
 	};
 
 	_.extend( media, { model: {}, view: {}, controller: {} });
@@ -221,7 +219,7 @@ window.wp = window.wp || {};
 			// If the attachment does not yet have an `id`, return an instantly
 			// rejected promise. Otherwise, all of our requests will fail.
 			if ( _.isUndefined( this.id ) )
-				return $.Deferred().reject().promise();
+				return $.Deferred().rejectWith( this ).promise();
 
 			// Overload the `read` request so Attachment.fetch() functions correctly.
 			if ( 'read' === method ) {
@@ -235,6 +233,10 @@ window.wp = window.wp || {};
 
 			// Overload the `update` request so properties can be saved.
 			} else if ( 'update' === method ) {
+				// If we do not have the necessary nonce, fail immeditately.
+				if ( ! this.get('nonces') || ! this.get('nonces').update )
+					return $.Deferred().rejectWith( this ).promise();
+
 				options = options || {};
 				options.context = this;
 
@@ -243,7 +245,7 @@ window.wp = window.wp || {};
 					action:  'save-attachment',
 					id:      this.id,
 					nonce:   this.get('nonces').update,
-					post_id: media.model.settings.postId
+					post_id: media.model.settings.post.id
 				});
 
 				// Record the values of the changed attributes.
@@ -285,10 +287,14 @@ window.wp = window.wp || {};
 		saveCompat: function( data, options ) {
 			var model = this;
 
+			// If we do not have the necessary nonce, fail immeditately.
+			if ( ! this.get('nonces') || ! this.get('nonces').update )
+				return $.Deferred().rejectWith( this ).promise();
+
 			return media.post( 'save-attachment-compat', _.defaults({
 				id:      this.id,
 				nonce:   this.get('nonces').update,
-				post_id: media.model.settings.postId
+				post_id: media.model.settings.post.id
 			}, data ) ).done( function( resp, status, xhr ) {
 				model.set( model.parse( resp, xhr ), options );
 			});
@@ -523,6 +529,34 @@ window.wp = window.wp || {};
 		_requery: function() {
 			if ( this.props.get('query') )
 				this.mirror( Query.get( this.props.toJSON() ) );
+		},
+
+		// If this collection is sorted by `menuOrder`, recalculates and saves
+		// the menu order to the database.
+		saveMenuOrder: function() {
+			if ( 'menuOrder' !== this.props.get('orderby') )
+				return;
+
+			// Removes any uploading attachments, updates each attachment's
+			// menu order, and returns an object with an { id: menuOrder }
+			// mapping to pass to the request.
+			var attachments = this.chain().filter( function( attachment ) {
+				return ! _.isUndefined( attachment.id );
+			}).map( function( attachment, index ) {
+				// Indices start at 1.
+				index = index + 1;
+				attachment.set( 'menuOrder', index );
+				return [ attachment.id, index ];
+			}).object().value();
+
+			if ( _.isEmpty( attachments ) )
+				return;
+
+			return media.post( 'save-attachment-order', {
+				nonce:       media.model.settings.post.nonce,
+				post_id:     media.model.settings.post.id,
+				attachments: attachments
+			});
 		}
 	}, {
 		comparator: function( a, b, options ) {
@@ -676,7 +710,7 @@ window.wp = window.wp || {};
 				options.context = this;
 				options.data = _.extend( options.data || {}, {
 					action:  'query-attachments',
-					post_id: media.model.settings.postId
+					post_id: media.model.settings.post.id
 				});
 
 				// Clone the args so manipulation is non-destructive.
@@ -803,33 +837,10 @@ window.wp = window.wp || {};
 		// If the workflow does not support multiple
 		// selected attachments, reset the selection.
 		add: function( models, options ) {
-			if ( ! this.multiple ) {
-				models = _.isArray( models ) && models.length ? _.first( models ) : models;
-				this.clear( options );
-			}
+			if ( ! this.multiple )
+				this.remove( this.models );
 
 			return Attachments.prototype.add.call( this, models, options );
-		},
-
-		// Removes all models from the selection.
-		clear: function( options ) {
-			this.remove( this.models, options ).single();
-			return this;
-		},
-
-		// Override the selection's reset method.
-		// Always direct items through add and remove,
-		// as we need them to fire.
-		reset: function( models, options ) {
-			this.clear( options ).add( models, options ).single();
-			return this;
-		},
-
-		// Create selection.has, which determines if a model
-		// exists in the collection based on cid and id,
-		// instead of direct comparison.
-		has: function( attachment ) {
-			return !! ( this.getByCid( attachment.cid ) || this.get( attachment.id ) );
 		},
 
 		single: function( model ) {
@@ -840,7 +851,7 @@ window.wp = window.wp || {};
 				this._single = model;
 
 			// If the single model isn't in the selection, remove it.
-			if ( this._single && ! this.has( this._single ) )
+			if ( this._single && ! this.getByCid( this._single.cid ) )
 				delete this._single;
 
 			this._single = this._single || this.last();

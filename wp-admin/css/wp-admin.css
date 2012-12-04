@@ -750,6 +750,10 @@ input[readonly] {
 	background-color: #eee;
 }
 
+:-moz-placeholder {
+   color: #a9a9a9;
+}
+
 /*------------------------------------------------------------------------------
   1.0 - Text Styles
 ------------------------------------------------------------------------------*/
@@ -940,7 +944,9 @@ p.search-box {
 	margin: 0;
 }
 
-.search-box input[name="s"], #search-plugins input[name="s"], .tagsdiv .newtag {
+.search-box input[name="s"],
+#search-plugins input[name="s"],
+.tagsdiv .newtag {
 	float: left;
 	height: 2em;
 	margin: 0 4px 0 0;
@@ -5605,7 +5611,7 @@ body.full-overlay-active {
 }
 
 /* Collapse Button */
-.wp-full-overlay .collapse-sidebar {
+.wp-full-overlay a.collapse-sidebar {
 	position: absolute;
 	bottom: 12px;
 	left: 0;

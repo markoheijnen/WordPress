@@ -114,6 +114,14 @@ p.search-box {
 	float: left;
 }
 
+.search-box input[name="s"],
+#search-plugins input[name="s"],
+.tagsdiv .newtag {
+	float: right;
+	margin-right: 0;
+	margin-left: 4px;
+}
+
 input[type=password] {
 	direction: ltr;
 }
@@ -724,6 +732,12 @@ th.sorted a span {
 
 .tablenav .actions {
 	padding: 2px 0 0 8px;
+}
+
+.tablenav .actions select {
+	float: right;
+	margin-right: 0;
+	margin-left: 6px;
 }
 
 .tablenav .delete {
@@ -1991,7 +2005,7 @@ a.rsswidget,
 }
 
 #dashboard-widgets #dashboard_quick_press form p.submit #save-post {
-	margin: 0 0 0 1em;
+	margin: 0 1px 0 0.7em;
 }
 
 #dashboard-widgets #dashboard_quick_press form p.submit #publish {

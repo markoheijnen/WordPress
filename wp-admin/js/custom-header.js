@@ -8,7 +8,8 @@
 
 		$headers.imagesLoaded( function() {
 			$headers.masonry({
-				itemSelector: '.default-header'
+				itemSelector: '.default-header',
+				isRTL: !! ( 'undefined' != typeof isRtl && isRtl )
 			});
 		});
 
@@ -17,30 +18,37 @@
 			var $el = $(this);
 			event.preventDefault();
 
+			// Create the media frame.
 			frame = wp.media({
-				title:     $el.data('choose'),
-				library:   {
+				// Set the title of the modal.
+				title: $el.data('choose'),
+
+				// Tell the modal to show only images.
+				library: {
 					type: 'image'
+				},
+
+				// Customize the submit button.
+				button: {
+					// Set the text of the button.
+					text: $el.data('update'),
+					// Tell the button not to close the modal, since we're
+					// going to refresh the page when the image is selected.
+					close: false
 				}
 			});
 
-			frame.toolbar.on( 'activate:select', function() {
-				frame.toolbar.view().set({
-					select: {
-						style: 'primary',
-						text:  $el.data('update'),
+			// When an image is selected, run a callback.
+			frame.on( 'select', function() {
+				// Grab the selected attachment.
+				var attachment = frame.state().get('selection').first(),
+					link = $el.data('updateLink');
 
-						click: function() {
-							var attachment = frame.state().get('selection').first(),
-								link = $el.data('updateLink');
-
-							window.location = link + '&file=' + attachment.id;
-						}
-					}
-				});
+				// Tell the browser to navigate to the crop step.
+				window.location = link + '&file=' + attachment.id;
 			});
 
-			frame.setState('library');
+			frame.open();
 		});
 	});
 }(jQuery));
