@@ -317,7 +317,7 @@ class WP_Image_Editor_Imagick extends WP_Image_Editor {
 					$dst_h = $src_h;
 
 				$this->image->scaleImage( $dst_w, $dst_h );
-				return $this->update_size( $dst_w, $dst_h );
+				return $this->update_size();
 			}
 		}
 		catch ( Exception $e ) {
