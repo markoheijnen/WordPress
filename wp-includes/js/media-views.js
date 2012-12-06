@@ -289,7 +289,7 @@
 			this.frame.router.render( mode );
 
 			view = router.get();
-			if ( view.select )
+			if ( view && view.select )
 				view.select( this.frame.content.mode() );
 		},
 
@@ -304,7 +304,7 @@
 			menu.mode( mode );
 
 			view = menu.get();
-			if ( view.select )
+			if ( view && view.select )
 				view.select( this.id );
 		},
 
@@ -357,6 +357,7 @@
 			sidebar:    'settings',
 			content:    'upload',
 			router:     'browse',
+			menu:       'default',
 			searchable: true,
 			filterable: false,
 			sortable:   true,
@@ -366,18 +367,35 @@
 			contentUserSetting: true,
 
 			// Sync the selection from the last state when 'multiple' matches.
-			syncLastSelection: true
+			syncSelection: true
 		},
 
 		initialize: function() {
-			if ( ! this.get('selection') ) {
-				this.set( 'selection', new media.model.Selection( null, {
-					multiple: this.get('multiple')
-				}) );
-			}
+			var selection = this.get('selection'),
+				props;
 
+			// If a library isn't provided, query all media items.
 			if ( ! this.get('library') )
 				this.set( 'library', media.query() );
+
+			// If a selection instance isn't provided, create one.
+			if ( ! (selection instanceof media.model.Selection) ) {
+				props = selection;
+
+				if ( ! props ) {
+					props = this.get('library').props.toJSON();
+					props = _.omit( props, 'orderby', 'query' );
+				}
+
+				// If the `selection` attribute is set to an object,
+				// it will use those values as the selection instance's
+				// `props` model. Otherwise, it will copy the library's
+				// `props` model.
+				this.set( 'selection', new media.model.Selection( null, {
+					multiple: this.get('multiple'),
+					props: props
+				}) );
+			}
 
 			if ( ! this.get('edge') )
 				this.set( 'edge', 120 );
@@ -389,14 +407,7 @@
 		},
 
 		activate: function() {
-			if ( this.get('syncLastSelection') ) {
-				this.getLastSelection();
-			}
-
-			this._excludeStateLibrary();
-			this.buildComposite();
-			this.on( 'change:library change:exclude', this.buildComposite, this );
-			this.on( 'change:excludeState', this._excludeState, this );
+			this.syncSelection();
 
 			wp.Uploader.queue.on( 'add', this.uploading, this );
 
@@ -411,6 +422,8 @@
 		},
 
 		deactivate: function() {
+			this.recordSelection();
+
 			this.frame.off( 'content:activate', this.saveContentMode, this );
 
 			// Unbind all event handlers that use this state as the context
@@ -418,11 +431,6 @@
 			this.get('selection').off( null, null, this );
 
 			wp.Uploader.queue.off( null, null, this );
-
-			this.off( 'change:excludeState', this._excludeState, this );
-			this.off( 'change:library change:exclude', this.buildComposite, this );
-
-			this.destroyComposite();
 		},
 
 		reset: function() {
@@ -465,31 +473,53 @@
 			setUserSetting( 'urlbutton', display.link );
 		},
 
-		getLastSelection: function() {
+		syncSelection: function() {
 			var selection = this.get('selection'),
-				lastState = this.frame.lastState(),
-				lastSelection = lastState && lastState.get('selection'),
-				lastMultiple, thisMultiple;
+				manager = this.frame._selection;
 
-			if ( ! lastSelection )
+			if ( ! this.get('syncSelection') || ! manager || ! selection )
 				return;
 
-			// We don't care about the method of multiple selection the
-			// selections use, just that they both support (or don't support)
-			// multiple selection.
-			lastMultiple = !! lastSelection.multiple;
-			thisMultiple = !! selection.multiple;
+			// If the selection supports multiple items, validate the stored
+			// attachments based on the new selection's conditions. Record
+			// the attachments that are not included; we'll maintain a
+			// reference to those. Other attachments are considered in flux.
+			if ( selection.multiple ) {
+				selection.reset( [], { silent: true });
+				selection.validateAll( manager.attachments );
+				manager.difference = _.difference( manager.attachments.models, selection.models );
+			}
 
-			if ( lastMultiple !== thisMultiple )
+			// Sync the selection's single item with the master.
+			selection.single( manager.single );
+		},
+
+		recordSelection: function() {
+			var selection = this.get('selection'),
+				manager = this.frame._selection,
+				filtered;
+
+			if ( ! this.get('syncSelection') || ! manager || ! selection )
 				return;
 
-			selection.reset( lastSelection.toArray() ).single( lastSelection.single() );
+			// Record the currently active attachments, which is a combination
+			// of the selection's attachments and the set of selected
+			// attachments that this specific selection considered invalid.
+			// Reset the difference and record the single attachment.
+			if ( selection.multiple ) {
+				manager.attachments.reset( selection.toArray().concat( manager.difference ) );
+				manager.difference = [];
+			} else {
+				manager.attachments.add( selection.toArray() );
+			}
+
+			manager.single = selection._single;
 		},
 
 		refreshContent: function() {
 			var selection = this.get('selection'),
 				frame = this.frame,
-				router = frame.router,
+				router = frame.router.get(),
 				mode = frame.content.mode();
 
 			if ( this.active && ! selection.length && ! router.get( mode ) )
@@ -519,67 +549,6 @@
 
 			if ( view && view.get( mode ) )
 				setUserSetting( 'libraryContent', mode );
-		},
-
-		buildComposite: function() {
-			var original = this.get('_library'),
-				exclude = this.get('exclude'),
-				composite;
-
-			this.destroyComposite();
-			if ( ! this.get('exclude') )
-				return;
-
-			// Remember the state's original library.
-			if ( ! original )
-				this.set( '_library', original = this.get('library') );
-
-			// Create a composite library in its place.
-			composite = new media.model.Attachments( null, {
-				props: _.pick( original.props.toJSON(), 'order', 'orderby' )
-			});
-
-			// Accepts attachments that exist in the original library and
-			// that do not exist in the excluded library.
-			composite.validator = function( attachment ) {
-				return !! original.getByCid( attachment.cid ) && ! exclude.getByCid( attachment.cid );
-			};
-
-			composite.mirror( original ).observe( exclude );
-
-			this.set( 'library', composite );
-		},
-
-		destroyComposite: function() {
-			var composite = this.get('library'),
-				original = this.get('_library');
-
-			if ( ! original )
-				return;
-
-			composite.unobserve();
-			this.set( 'library', original );
-			this.unset('_library');
-		},
-
-		_excludeState: function() {
-			var current = this.get('excludeState'),
-				previous = this.previous('excludeState');
-
-			if ( previous )
-				this.frame.state( previous ).off( 'change:library', this._excludeStateLibrary, this );
-
-			if ( current )
-				this.frame.state( current ).on( 'change:library', this._excludeStateLibrary, this );
-		},
-
-		_excludeStateLibrary: function() {
-			var current = this.get('excludeState');
-
-			if ( ! current )
-				return;
-
-			this.set( 'exclude', this.frame.state( current ).get('library') );
 		}
 	});
 
@@ -598,7 +567,11 @@
 			content:    'browse',
 			title:      l10n.editGalleryTitle,
 			priority:   60,
-			dragInfo:   true
+			dragInfo:   true,
+
+			// Don't sync the selection, as the Edit Gallery library
+			// *is* the selection.
+			syncSelection: false
 		},
 
 		initialize: function() {
@@ -662,6 +635,51 @@
 		}
 	});
 
+	// wp.media.controller.GalleryAdd
+	// ---------------------------------
+	media.controller.GalleryAdd = media.controller.Library.extend({
+		defaults: _.defaults({
+			id:           'gallery-library',
+			filterable:   'uploaded',
+			multiple:     'add',
+			menu:         'gallery',
+			toolbar:      'gallery-add',
+			title:        l10n.addToGalleryTitle,
+			priority:     100,
+
+			// Don't sync the selection, as the Edit Gallery library
+			// *is* the selection.
+			syncSelection: false
+		}, media.controller.Library.prototype.defaults ),
+
+		initialize: function() {
+			// If we haven't been provided a `library`, create a `Selection`.
+			if ( ! this.get('library') )
+				this.set( 'library', media.query({ type: 'image' }) );
+
+			media.controller.Library.prototype.initialize.apply( this, arguments );
+		},
+
+		activate: function() {
+			var library = this.get('library'),
+				edit    = this.frame.state('gallery-edit').get('library');
+
+			if ( this.editLibrary && this.editLibrary !== edit )
+				library.unobserve( this.editLibrary );
+
+			// Accepts attachments that exist in the original library and
+			// that do not exist in gallery's library.
+			library.validator = function( attachment ) {
+				return !! this.mirroring.getByCid( attachment.cid ) && ! edit.getByCid( attachment.cid ) && media.model.Selection.prototype.validator.apply( this, arguments );
+			};
+
+			library.observe( edit );
+			this.editLibrary = edit;
+
+			media.controller.Library.prototype.activate.apply( this, arguments );
+		}
+	});
+
 	// wp.media.controller.FeaturedImage
 	// ---------------------------------
 	media.controller.FeaturedImage = media.controller.Library.extend({
@@ -669,10 +687,11 @@
 			id:         'featured-image',
 			filterable: 'uploaded',
 			multiple:   false,
-			menu:       'main',
 			toolbar:    'featured-image',
-			title:      l10n.featuredImageTitle,
-			priority:   60
+			title:      l10n.setFeaturedImageTitle,
+			priority:   60,
+
+			syncSelection: false
 		}, media.controller.Library.prototype.defaults ),
 
 		initialize: function() {
@@ -707,6 +726,17 @@
 		},
 
 		activate: function() {
+			this.updateSelection();
+			this.frame.on( 'open', this.updateSelection, this );
+			media.controller.Library.prototype.activate.apply( this, arguments );
+		},
+
+		deactivate: function() {
+			this.frame.off( 'open', this.updateSelection, this );
+			media.controller.Library.prototype.deactivate.apply( this, arguments );
+		},
+
+		updateSelection: function() {
 			var selection = this.get('selection'),
 				id = media.view.settings.post.featuredImageId,
 				attachment;
@@ -717,7 +747,6 @@
 			}
 
 			selection.reset( attachment ? [ attachment ] : [] );
-			media.controller.Library.prototype.activate.apply( this, arguments );
 		}
 	});
 
@@ -728,12 +757,12 @@
 		defaults: {
 			id:      'embed',
 			url:     '',
-			menu:    'main',
+			menu:    'default',
 			content: 'embed',
 			toolbar: 'main-embed',
 			type:    'link',
 
-			title:    l10n.fromUrlTitle,
+			title:    l10n.insertFromUrlTitle,
 			priority: 120
 		},
 
@@ -761,6 +790,7 @@
 				url = this.props.get('url'),
 				image = new Image();
 
+			// Try to load the image and find its width/height.
 			image.onload = function() {
 				if ( state !== frame.state() || url !== state.props.get('url') )
 					return;
@@ -773,6 +803,11 @@
 			};
 
 			image.src = url;
+
+			// Check if the URL looks like an image; skew toward success.
+			url = url.replace( /([?|#].*)$/, '' );
+			if ( /\.(png|jpe?g|gif)$/i.test( url ) )
+				attributes.type = 'image';
 		},
 
 		refresh: function() {
@@ -780,7 +815,7 @@
 		},
 
 		reset: function() {
-			this.props = new Backbone.Model({ url: '' });
+			this.props.clear().set({ url: '' });
 
 			if ( this.active )
 				this.refresh();
@@ -1225,6 +1260,9 @@
 				model.frame = this;
 				model.trigger('ready');
 			}, this );
+
+			if ( this.options.states )
+				this.states.add( this.options.states );
 		},
 
 		reset: function() {
@@ -1288,6 +1326,9 @@
 			// Bind default title creation.
 			this.on( 'title:create:default', this.createTitle, this );
 			this.title.mode('default');
+
+			// Bind default menu.
+			this.on( 'menu:create:default', this.createMenu, this );
 		},
 
 		render: function() {
@@ -1344,12 +1385,12 @@
 					src:     tabUrl + '&tab=' + id,
 					title:   title,
 					content: 'iframe',
-					menu:    'main'
+					menu:    'default'
 				}, options ) );
 			}, this );
 
 			this.on( 'content:create:iframe', this.iframeContent, this );
-			this.on( 'menu:render:main', this.iframeMenu, this );
+			this.on( 'menu:render:default', this.iframeMenu, this );
 			this.on( 'open', this.hijackThickbox, this );
 			this.on( 'close', this.restoreThickbox, this );
 		},
@@ -1438,19 +1479,25 @@
 					multiple: this.options.multiple
 				});
 			}
+
+			this._selection = {
+				attachments: new Attachments(),
+				difference: []
+			};
 		},
 
 		createStates: function() {
 			var options = this.options;
 
+			if ( this.options.states )
+				return;
+
 			// Add the default states.
 			this.states.add([
 				// Main states.
 				new media.controller.Library({
-					selection: options.selection,
 					library:   media.query( options.library ),
 					multiple:  options.multiple,
-					menu:      'main',
 					title:     options.title,
 					priority:  20
 				})
@@ -1458,7 +1505,6 @@
 		},
 
 		bindHandlers: function() {
-			this.on( 'menu:create:main', this.createMenu, this );
 			this.on( 'router:create:browse', this.createRouter, this );
 			this.on( 'router:render:browse', this.browseRouter, this );
 			this.on( 'content:create:browse', this.browseContent, this );
@@ -1534,8 +1580,7 @@
 		},
 
 		createStates: function() {
-			var options = this.options,
-				selection = options.selection;
+			var options = this.options;
 
 			// Add the default states.
 			this.states.add([
@@ -1544,13 +1589,15 @@
 					id:         'insert',
 					title:      l10n.insertMediaTitle,
 					priority:   20,
-					menu:       'main',
 					toolbar:    'main-insert',
 					filterable: 'all',
 					library:    media.query( options.library ),
-					selection:  selection,
 					multiple:   options.multiple ? 'reset' : false,
 					editable:   true,
+
+					// If the user isn't allowed to edit fields,
+					// can they still edit it locally?
+					allowLocalEdits: true,
 
 					// Show the attachment display settings.
 					displaySettings: true,
@@ -1563,7 +1610,6 @@
 					id:         'gallery',
 					title:      l10n.createGalleryTitle,
 					priority:   40,
-					menu:       'main',
 					toolbar:    'main-gallery',
 					filterable: 'uploaded',
 					multiple:   'add',
@@ -1571,11 +1617,7 @@
 
 					library:  media.query( _.defaults({
 						type: 'image'
-					}, options.library ) ),
-
-					selection: new media.model.Selection( selection.models, {
-						multiple: 'add'
-					})
+					}, options.library ) )
 				}),
 
 				// Embed states.
@@ -1588,25 +1630,12 @@
 					menu:    'gallery'
 				}),
 
-				new media.controller.Library({
-					id:           'gallery-library',
-					library:      media.query({ type: 'image' }),
-					filterable:   'uploaded',
-					multiple:     'add',
-					menu:         'gallery',
-					toolbar:      'gallery-add',
-					excludeState: 'gallery-edit',
-					title:        l10n.addToGalleryTitle,
-					priority:     100
-				})
+				new media.controller.GalleryAdd()
 			]);
 
 
 			if ( media.view.settings.post.featuredImageId ) {
-				this.states.add( new media.controller.FeaturedImage({
-					controller: this,
-					menu:       'main'
-				}) );
+				this.states.add( new media.controller.FeaturedImage() );
 			}
 		},
 
@@ -1620,7 +1649,7 @@
 
 			var handlers = {
 					menu: {
-						'main':    'mainMenu',
+						'default': 'mainMenu',
 						'gallery': 'galleryMenu'
 					},
 
@@ -1830,6 +1859,7 @@
 						style:    'primary',
 						text:     l10n.addToGallery,
 						priority: 80,
+						requires: { selection: true },
 
 						click: function() {
 							var controller = this.controller,
@@ -1867,7 +1897,7 @@
 				container: document.body,
 				title:     '',
 				propagate: true,
-				freeze:    document.body
+				freeze:    true
 			});
 		},
 
@@ -1904,8 +1934,7 @@
 
 		open: function() {
 			var $el = this.$el,
-				options = this.options,
-				$freeze;
+				options = this.options;
 
 			if ( $el.is(':visible') )
 				return this;
@@ -1913,15 +1942,11 @@
 			if ( ! this.views.attached )
 				this.attach();
 
-			// If the `freeze` option is set, record the window's scroll
-			// position and the body's overflow, and then set overflow to hidden.
+			// If the `freeze` option is set, record the window's scroll position.
 			if ( options.freeze ) {
-				$freeze = $( options.freeze );
 				this._freeze = {
-					overflow:  $freeze.css('overflow'),
 					scrollTop: $( window ).scrollTop()
 				};
-				$freeze.css( 'overflow', 'hidden' );
 			}
 
 			$el.show().focus();
@@ -1937,10 +1962,8 @@
 			this.$el.hide();
 			this.propagate('close');
 
-			// If the `freeze` option is set, restore the container's scroll
-			// position and overflow property.
+			// If the `freeze` option is set, restore the container's scroll position.
 			if ( freeze ) {
-				$( this.options.freeze ).css( 'overflow', freeze.overflow );
 				$( window ).scrollTop( freeze.scrollTop );
 			}
 
@@ -1982,6 +2005,58 @@
 				this.escape();
 				return;
 			}
+		}
+	});
+
+	// wp.media.view.FocusManager
+	// ----------------------------
+	media.view.FocusManager = media.View.extend({
+		events: {
+			keydown: 'recordTab',
+			focusin: 'updateIndex'
+		},
+
+		focus: function() {
+			if ( _.isUndefined( this.index ) )
+				return;
+
+			// Update our collection of `$tabbables`.
+			this.$tabbables = this.$(':tabbable');
+
+			// If tab is saved, focus it.
+			this.$tabbables.eq( this.index ).focus();
+		},
+
+		recordTab: function( event ) {
+			// Look for the tab key.
+			if ( 9 !== event.keyCode )
+				return;
+
+			// First try to update the index.
+			if ( _.isUndefined( this.index ) )
+				this.updateIndex( event );
+
+			// If we still don't have an index, bail.
+			if ( _.isUndefined( this.index ) )
+				return;
+
+			var index = this.index + ( event.shiftKey ? -1 : 1 );
+
+			if ( index >= 0 && index < this.$tabbables.length )
+				this.index = index;
+			else
+				delete this.index;
+		},
+
+		updateIndex: function( event ) {
+			this.$tabbables = this.$(':tabbable');
+
+			var index = this.$tabbables.index( event.target );
+
+			if ( -1 === index )
+				delete this.index;
+			else
+				this.index = index;
 		}
 	});
 
@@ -2079,6 +2154,31 @@
 			}
 		},
 
+		dispose: function() {
+			if ( this.disposing )
+				return media.View.prototype.dispose.apply( this, arguments );
+
+			// Run remove on `dispose`, so we can be sure to refresh the
+			// uploader with a view-less DOM. Track whether we're disposing
+			// so we don't trigger an infinite loop.
+			this.disposing = true;
+			return this.remove();
+		},
+
+		remove: function() {
+			var result = media.View.prototype.remove.apply( this, arguments );
+
+			_.defer( _.bind( this.refresh, this ) );
+			return result;
+		},
+
+		refresh: function() {
+			var uploader = this.controller.uploader;
+
+			if ( uploader )
+				uploader.refresh();
+		},
+
 		ready: function() {
 			var $browser = this.options.$browser,
 				$placeholder;
@@ -2095,6 +2195,7 @@
 				$placeholder.replaceWith( $browser.show() );
 			}
 
+			this.refresh();
 			return this;
 		}
 	});
@@ -2390,7 +2491,7 @@
 
 		refresh: function() {
 			var url = this.controller.state().props.get('url');
-			this.get('select').model.set( 'disabled', ! url || /^https?:\/\/$/.test(url) );
+			this.get('select').model.set( 'disabled', ! url || url === 'http://' );
 
 			media.view.Toolbar.Select.prototype.refresh.apply( this, arguments );
 		}
@@ -2769,7 +2870,8 @@
 					width:         '',
 					height:        '',
 					compat:        false,
-					alt:           ''
+					alt:           '',
+					description:   '',
 				});
 
 			options.buttons  = this.buttons;
@@ -2783,6 +2885,9 @@
 				options.can.remove = !! options.nonces['delete'];
 				options.can.save = !! options.nonces.update;
 			}
+
+			if ( this.controller.state().get('allowLocalEdits') )
+				options.allowLocalEdits = true;
 
 			this.views.detach();
 			this.$el.html( this.template( options ) );
@@ -2800,6 +2905,7 @@
 			this.updateSave();
 
 			this.views.render();
+
 			return this;
 		},
 
@@ -3079,7 +3185,8 @@
 				refreshSensitivity: 200,
 				refreshThreshold:   3,
 				AttachmentView:     media.view.Attachment,
-				sortable:           false
+				sortable:           false,
+				resize:             true
 			});
 
 			this._viewsByCid = {};
@@ -3108,7 +3215,8 @@
 			_.bindAll( this, 'css' );
 			this.model.on( 'change:edge change:gutter', this.css, this );
 			this._resizeCss = _.debounce( _.bind( this.css, this ), this.refreshSensitivity );
-			$(window).on( 'resize.attachments', this._resizeCss );
+			if ( this.options.resize )
+				$(window).on( 'resize.attachments', this._resizeCss );
 			this.css();
 		},
 
@@ -3138,7 +3246,6 @@
 			if ( ! this.$el.is(':visible') )
 				return edge;
 
-
 			gutter  = this.model.get('gutter') * 2;
 			width   = this.$el.width() - gutter;
 			columns = Math.ceil( width / ( edge + gutter ) );
@@ -3147,13 +3254,12 @@
 		},
 
 		initSortable: function() {
-			var collection = this.collection,
-				from;
+			var collection = this.collection;
 
 			if ( ! this.options.sortable || ! $.fn.sortable )
 				return;
 
-			this.$el.sortable({
+			this.$el.sortable( _.extend({
 				// If the `collection` has a `comparator`, disable sorting.
 				disabled: !! collection.comparator,
 
@@ -3167,13 +3273,13 @@
 
 				// Record the initial `index` of the dragged model.
 				start: function( event, ui ) {
-					from = ui.item.index();
+					ui.item.data('sortableIndexStart', ui.item.index());
 				},
 
 				// Update the model's index in the collection.
 				// Do so silently, as the view is already accurate.
 				update: function( event, ui ) {
-					var model = collection.at( from ),
+					var model = collection.at( ui.item.data('sortableIndexStart') ),
 						comparator = collection.comparator;
 
 					// Temporarily disable the comparator to prevent `add`
@@ -3198,7 +3304,7 @@
 					// update the menu order.
 					collection.saveMenuOrder();
 				}
-			});
+			}, this.options.sortable ) );
 
 			// If the `orderby` property is changed on the `collection`,
 			// check to see if we have a `comparator`. If so, disable sorting.
@@ -3317,6 +3423,7 @@
 
 		initialize: function() {
 			this.createFilters();
+			_.extend( this.filters, this.options.filters );
 
 			// Build `<option>` elements.
 			this.$el.html( _.chain( this.filters ).map( function( filter, value ) {
@@ -3361,9 +3468,16 @@
 
 	media.view.AttachmentFilters.Uploaded = media.view.AttachmentFilters.extend({
 		createFilters: function() {
+			var type = this.model.get('type'),
+				types = media.view.settings.mimeTypes,
+				text;
+
+			if ( types && type )
+				text = types[ type ];
+
 			this.filters = {
 				all: {
-					text:  l10n.allMediaItems,
+					text:  text || l10n.allMediaItems,
 					props: {
 						uploadedTo: null,
 						orderby: 'date',
@@ -3627,18 +3741,14 @@
 				clearable: true
 			});
 
-			this.attachments = new media.view.Attachments({
+			this.attachments = new media.view.Attachments.Selection({
 				controller: this.controller,
 				collection: this.collection,
 				selection:  this.collection,
-				sortable:   true,
 				model:      new Backbone.Model({
 					edge:   40,
 					gutter: 5
-				}),
-
-				// The single `Attachment` view to be used in the `Attachments` view.
-				AttachmentView: media.view.Attachment.Selection
+				})
 			});
 
 			this.views.set( '.selection-view', this.attachments );
@@ -3663,7 +3773,7 @@
 			this.$el.toggleClass( 'one', 1 === collection.length );
 			this.$el.toggleClass( 'editing', editing );
 
-			this.$('.count').text( collection.length + ' ' + l10n.selected );
+			this.$('.count').text( l10n.selected.replace('%d', collection.length) );
 		},
 
 		edit: function( event ) {
@@ -3692,6 +3802,26 @@
 		}
 	});
 
+	/**
+	 * wp.media.view.Attachments.Selection
+	 */
+	media.view.Attachments.Selection = media.view.Attachments.extend({
+		events: {},
+		initialize: function() {
+			_.defaults( this.options, {
+				sortable:   true,
+				resize:     false,
+
+				// The single `Attachment` view to be used in the `Attachments` view.
+				AttachmentView: media.view.Attachment.Selection
+			});
+			return media.view.Attachments.prototype.initialize.apply( this, arguments );
+		}
+	});
+
+	/**
+	 * wp.media.view.Attachments.EditSelection
+	 */
 	media.view.Attachment.EditSelection = media.view.Attachment.Selection.extend({
 		buttons: {
 			close: true
@@ -3715,11 +3845,14 @@
 			this.model.on( 'change', this.updateChanges, this );
 		},
 
-		render: function() {
-			this.$el.html( this.template( _.defaults({
+		prepare: function() {
+			return _.defaults({
 				model: this.model.toJSON()
-			}, this.options ) ) );
+			}, this.options );
+		},
 
+		render: function() {
+			media.View.prototype.render.apply( this, arguments );
 			// Select the correct values.
 			_( this.model.attributes ).chain().keys().each( this.update, this );
 			return this;
@@ -3742,7 +3875,7 @@
 				$value = $setting.find('[value="' + value + '"]');
 
 				if ( $value.length ) {
-					$value.select();
+					$value.prop( 'selected', true );
 				} else {
 					// If we can't find the desired value, record what *is* selected.
 					this.model.set( $setting.data('setting'), $setting.find(':selected').val() );
@@ -3888,14 +4021,40 @@
 			'change [data-setting] input':    'updateSetting',
 			'change [data-setting] select':   'updateSetting',
 			'change [data-setting] textarea': 'updateSetting',
-			'click .delete-attachment':       'deleteAttachment'
+			'click .delete-attachment':       'deleteAttachment',
+			'click .edit-attachment':         'editAttachment',
+			'click .refresh-attachment':      'refreshAttachment'
 		},
 
-		deleteAttachment: function(event) {
+		initialize: function() {
+			this.focusManager = new media.view.FocusManager({
+				el: this.el
+			});
+
+			media.view.Attachment.prototype.initialize.apply( this, arguments );
+		},
+
+		render: function() {
+			media.view.Attachment.prototype.render.apply( this, arguments );
+			this.focusManager.focus();
+			return this;
+		},
+
+		deleteAttachment: function( event ) {
 			event.preventDefault();
 
 			if ( confirm( l10n.warnDelete ) )
 				this.model.destroy();
+		},
+
+		editAttachment: function( event ) {
+			this.$el.addClass('needs-refresh');
+		},
+
+		refreshAttachment: function( event ) {
+			this.$el.removeClass('needs-refresh');
+			event.preventDefault();
+			this.model.fetch();
 		}
 	});
 
@@ -3914,7 +4073,18 @@
 		},
 
 		initialize: function() {
+			this.focusManager = new media.view.FocusManager({
+				el: this.el
+			});
+
 			this.model.on( 'change:compat', this.render, this );
+		},
+
+		dispose: function() {
+			if ( this.$(':focus').length )
+				this.save();
+
+			return media.View.prototype.dispose.apply( this, arguments );
 		},
 
 		render: function() {
@@ -3922,7 +4092,11 @@
 			if ( ! compat || ! compat.item )
 				return;
 
+			this.views.detach();
 			this.$el.html( compat.item );
+			this.views.render();
+
+			this.focusManager.focus();
 			return this;
 		},
 
@@ -3933,7 +4107,8 @@
 		save: function( event ) {
 			var data = {};
 
-			event.preventDefault();
+			if ( event )
+				event.preventDefault();
 
 			_.each( this.$el.serializeArray(), function( pair ) {
 				data[ pair.name ] = pair.value;
@@ -3969,23 +4144,16 @@
 				model:      this.model.props
 			}).render();
 
-			this._settings = new media.View();
+			this.views.set([ this.url ]);
 			this.refresh();
 			this.model.on( 'change:type', this.refresh, this );
 		},
 
-		render: function() {
-			this.$el.html([ this.url.el, this._settings.el ]);
-			this.url.focus();
-			this.views.render();
-			return this;
-		},
-
 		settings: function( view ) {
-			view.render();
-			this._settings.$el.replaceWith( view.$el );
-			this._settings.remove();
+			if ( this._settings )
+				this._settings.remove();
 			this._settings = view;
+			this.views.add( view );
 		},
 
 		refresh: function() {
@@ -4039,7 +4207,12 @@
 				return;
 
 			this.input.value = this.model.get('url') || 'http://';
+			media.View.prototype.render.apply( this, arguments );
 			return this;
+		},
+
+		ready: function() {
+			this.focus();
 		},
 
 		url: function( event ) {

@@ -293,6 +293,41 @@ window.wp = window.wp || {};
 		progress: function() {},
 		complete: function() {},
 		refresh:  function() {
+			var node, attached, container, id;
+
+			if ( this.browser ) {
+				node = this.browser[0];
+
+				// Check if the browser node is in the DOM.
+				while ( node ) {
+					if ( node === document.body ) {
+						attached = true;
+						break;
+					}
+					node = node.parentNode;
+				}
+
+				// If the browser node is not attached to the DOM, use a
+				// temporary container to house it, as the browser button
+				// shims require the button to exist in the DOM at all times.
+				if ( ! attached ) {
+					id = 'wp-uploader-browser-' + this.uploader.id;
+
+					container = $( '#' + id );
+					if ( ! container.length ) {
+						container = $('<div class="wp-uploader-browser" />').css({
+							position: 'fixed',
+							top: '-1000px',
+							left: '-1000px',
+							height: 0,
+							width: 0
+						}).attr( 'id', 'wp-uploader-browser-' + this.uploader.id ).appendTo('body');
+					}
+
+					container.append( this.browser );
+				}
+			}
+
 			this.uploader.refresh();
 		}
 	});

@@ -1286,16 +1286,17 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 
 	$default_args = array(
 		'errors' => null,
-		'taxonomies' => false,
-		'description' => false,
+		'in_modal' => false,
 	);
+
+	$user_can_edit = current_user_can( 'edit_post', $attachment_id );
 
 	$args = wp_parse_args( $args, $default_args );
 	$args = apply_filters( 'get_media_item_args', $args );
 
 	$form_fields = array();
 
-	if ( $args['taxonomies'] ) {
+	if ( $args['in_modal'] ) {
 		foreach ( get_attachment_taxonomies($post) as $taxonomy ) {
 			$t = (array) get_taxonomy($taxonomy);
 			if ( ! $t['public'] || ! $t['show_ui'] )
@@ -1314,6 +1315,7 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 			foreach ( $terms as $term )
 				$values[] = $term->slug;
 			$t['value'] = join(', ', $values);
+			$t['taxonomy'] = true;
 
 			$form_fields[$taxonomy] = $t;
 		}
@@ -1326,19 +1328,18 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 	$form_fields = apply_filters( 'attachment_fields_to_edit', $form_fields, $post );
 
 	unset( $form_fields['image-size'], $form_fields['align'], $form_fields['image_alt'],
-		$form_fields['post_title'], $form_fields['post_excerpt'],
+		$form_fields['post_title'], $form_fields['post_excerpt'], $form_fields['post_content'],
 		$form_fields['url'], $form_fields['menu_order'], $form_fields['image_url'] );
-
-	if ( ! $args['description'] )
-		unset( $form_fields['post_content'] );
 
 	$media_meta = apply_filters( 'media_meta', '', $post );
 
 	$defaults = array(
-		'input'      => 'text',
-		'required'   => false,
-		'value'      => '',
-		'extra_rows' => array(),
+		'input'         => 'text',
+ 		'required'      => false,
+ 		'value'         => '',
+ 		'extra_rows'    => array(),
+ 		'show_in_edit'  => true,
+ 		'show_in_modal' => true,
 	);
 
 	$hidden_fields = array();
@@ -1358,11 +1359,15 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 
 		$field = array_merge( $defaults, $field );
 
+		if ( ( ! $field['show_in_edit'] && ! $args['in_modal'] ) || ( ! $field['show_in_modal'] && $args['in_modal'] ) )
+			continue;
+
 		if ( $field['input'] == 'hidden' ) {
 			$hidden_fields[$name] = $field['value'];
 			continue;
 		}
 
+		$readonly      = ! $user_can_edit && ! empty( $field['taxonomy'] ) ? " readonly='readonly' " : '';
 		$required      = $field['required'] ? '<span class="alignright"><abbr title="required" class="required">*</abbr></span>' : '';
 		$aria_required = $field['required'] ? " aria-required='true' " : '';
 		$class  = 'compat-field-' . $id;
@@ -1381,7 +1386,7 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 			}
 			$item .= "<textarea id='$id_attr' name='$name' $aria_required>" . $field['value'] . '</textarea>';
 		} else {
-			$item .= "<input type='text' class='text' id='$id_attr' name='$name' value='" . esc_attr( $field['value'] ) . "' $aria_required />";
+			$item .= "<input type='text' class='text' id='$id_attr' name='$name' value='" . esc_attr( $field['value'] ) . "' $readonly $aria_required />";
 		}
 		if ( !empty( $field['helps'] ) )
 			$item .= "<p class='help'>" . join( "</p>\n<p class='help'>", array_unique( (array) $field['helps'] ) ) . '</p>';
@@ -1408,9 +1413,12 @@ function get_compat_media_markup( $attachment_id, $args = null ) {
 	if ( $item )
 		$item = '<table class="compat-attachment-fields">' . $item . '</table>';
 
+	foreach ( $hidden_fields as $hidden_field => $value ) {
+		$item .= '<input type="hidden" name="' . esc_attr( $hidden_field ) . '" value="' . esc_attr( $value ) . '" />' . "\n";
+	}
+
 	return array(
 		'item'   => $item,
-		'hidden' => $hidden_fields,
 		'meta'   => $media_meta,
 	);
 }
@@ -2262,38 +2270,39 @@ function multisite_over_quota_message() {
 function edit_form_image_editor() {
 	$post = get_post();
 
+	$open = isset( $_GET['image-editor'] );
+	if ( $open )
+		require_once ABSPATH . 'wp-admin/includes/image-edit.php';
+
 	$thumb_url = false;
 	if ( $attachment_id = intval( $post->ID ) )
-		$thumb_url = wp_get_attachment_image_src( $attachment_id, array( 900, 600 ), true );
+		$thumb_url = wp_get_attachment_image_src( $attachment_id, array( 900, 450 ), true );
 
 	$filename = esc_html( basename( $post->guid ) );
 	$title = esc_attr( $post->post_title );
 	$alt_text = get_post_meta( $post->ID, '_wp_attachment_image_alt', true );
 
-	$media_dims = '';
-	$meta = wp_get_attachment_metadata( $post->ID );
-	if ( is_array( $meta ) && array_key_exists( 'width', $meta ) && array_key_exists( 'height', $meta ) )
-		$media_dims .= "<span id='media-dims-$post->ID'>{$meta['width']}&nbsp;&times;&nbsp;{$meta['height']}</span> ";
-	$media_dims = apply_filters( 'media_meta', $media_dims, $post );
-
 	$att_url = wp_get_attachment_url( $post->ID );
 
-	$image_edit_button = '';
-	if ( wp_attachment_is_image( $post->ID ) && wp_image_editor_supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
-		$nonce = wp_create_nonce( "image_editor-$post->ID" );
-		$image_edit_button = "<input type='button' id='imgedit-open-btn-$post->ID' onclick='imageEdit.open( $post->ID, \"$nonce\" )' class='button' value='" . esc_attr__( 'Edit Image' ) . "' /> <span class='spinner'></span>";
-	}
-
+	if ( wp_attachment_is_image( $post->ID ) ) :
+		$image_edit_button = '';
+		if ( wp_image_editor_supports( array( 'mime_type' => $post->post_mime_type ) ) ) {
+			$nonce = wp_create_nonce( "image_editor-$post->ID" );
+			$image_edit_button = "<input type='button' id='imgedit-open-btn-$post->ID' onclick='imageEdit.open( $post->ID, \"$nonce\" )' class='button' value='" . esc_attr__( 'Edit Image' ) . "' /> <span class='spinner'></span>";
+		}
  	?>
 	<div class="wp_attachment_holder">
 		<div class="imgedit-response" id="imgedit-response-<?php echo $attachment_id; ?>"></div>
 
-		<div class="wp_attachment_image" id="media-head-<?php echo $attachment_id; ?>">
+		<div<?php if ( $open ) echo ' style="display:none"'; ?> class="wp_attachment_image" id="media-head-<?php echo $attachment_id; ?>">
 			<p id="thumbnail-head-<?php echo $attachment_id; ?>"><img class="thumbnail" src="<?php echo set_url_scheme( $thumb_url[0] ); ?>" style="max-width:100%" alt="" /></p>
 			<p><?php echo $image_edit_button; ?></p>
 		</div>
-		<div style="display:none" class="image-editor" id="image-editor-<?php echo $attachment_id; ?>"></div>
+		<div<?php if ( ! $open ) echo ' style="display:none"'; ?> class="image-editor" id="image-editor-<?php echo $attachment_id; ?>">
+			<?php if ( $open ) wp_image_editor( $attachment_id ); ?>
+		</div>
 	</div>
+	<?php endif; ?>
 
 	<div class="wp_attachment_details">
 		<p>
@@ -2308,13 +2317,24 @@ function edit_form_image_editor() {
 		</p>
 	<?php endif; ?>
 
+	<?php
+		$quicktags_settings = array( 'buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,spell,close' );
+		$editor_args = array(
+			'textarea_name' => 'content',
+			'textarea_rows' => 5,
+			'media_buttons' => false,
+			'tinymce' => false,
+			'quicktags' => $quicktags_settings,
+		);
+	?>
+
+	<label for="content"><strong><?php _e( 'Description' ); ?></strong></label>
+	<?php wp_editor( $post->post_content, 'attachment_content', $editor_args ); ?>
+
 	</div>
 	<?php
 	$extras = get_compat_media_markup( $post->ID );
 	echo $extras['item'];
-	foreach ( $extras['hidden'] as $hidden_field => $value ) {
-		echo '<input type="hidden" name="' . esc_attr( $hidden_field ) . '" value="' . esc_attr( $value ) . '" />' . "\n";
-	}
 	echo '<input type="hidden" id="image-edit-context" value="edit-attachment" />' . "\n";
 }
 
@@ -2344,7 +2364,12 @@ function attachment_submitbox_metadata() {
 		<?php _e( 'File name:' ); ?> <strong><?php echo $filename; ?></strong>
 	</div>
 	<div class="misc-pub-section">
-		<?php _e( 'File type:' ); ?> <strong><?php echo $post->post_mime_type; ?></strong>
+		<?php _e( 'File type:' ); ?> <strong><?php
+			if ( preg_match( '/^.*?\.(\w+)$/', get_attached_file( $post->ID ), $matches ) )
+				echo esc_html( strtoupper( $matches[1] ) );
+			else
+				echo strtoupper( str_replace( 'image/', '', $post->post_mime_type ) );
+		?></strong>
 	</div>
 
 <?php if ( $media_dims ) : ?>

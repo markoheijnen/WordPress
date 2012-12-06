@@ -218,7 +218,7 @@ if ( !in_array( $post->post_status, array('publish', 'future', 'private') ) || 0
 	endif;
 } else { ?>
 		<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr_e('Update') ?>" />
-		<input name="save" type="submit" class="button-primary button-large" id="publish" accesskey="p" value="<?php esc_attr_e('Update') ?>" />
+		<input name="save" type="submit" class="button button-primary button-large" id="publish" accesskey="p" value="<?php esc_attr_e('Update') ?>" />
 <?php
 } ?>
 </div>
@@ -292,30 +292,6 @@ function attachment_submit_meta_box( $post ) {
 
 </div>
 
-<?php
-}
-
-/**
- * Display attachment/media-specific information
- *
- * @since 3.5.0
- *
- * @param object $post
- */
-function attachment_content_meta_box( $post ) {
-	$quicktags_settings = array( 'buttons' => 'strong,em,link,block,del,ins,img,ul,ol,li,code,spell,close' );
-	$editor_args = array(
-		'textarea_name' => 'content',
-		'textarea_rows' => 5,
-		'media_buttons' => false,
-		'tinymce' => false,
-		'quicktags' => $quicktags_settings,
-	);
-?>
-<p>
-	<label class="screen-reader-text" for="content"><strong><?php _e( 'Attachment Page Content' ); ?></strong></label>
-	<?php wp_editor( $post->post_content, 'attachment_content', $editor_args ); ?>
-</p>
 <?php
 }
 
