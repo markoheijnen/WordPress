@@ -111,7 +111,7 @@ final class _WP_Editors {
 				$switch_class = 'tmce-active';
 			}
 
-			$buttons .= '<a id="' . $editor_id . '-html" class="wp-switch-editor switch-html" onclick="switchEditors.switchto(this);">' . __('Text') . "</a>\n";
+			$buttons .= '<a id="' . $editor_id . '-html" class="wp-switch-editor switch-html" onclick="switchEditors.switchto(this);">' . _x( 'Text', 'Name for the Text editor tab (formerly HTML)' ) . "</a>\n";
 			$buttons .= '<a id="' . $editor_id . '-tmce" class="wp-switch-editor switch-tmce" onclick="switchEditors.switchto(this);">' . __('Visual') . "</a>\n";
 		}
 
@@ -569,10 +569,12 @@ final class _WP_Editors {
 		$baseurl = self::$baseurl;
 
 		if ( $tmce_on ) {
-			if ( $compressed )
+			if ( $compressed ) {
 				echo "<script type='text/javascript' src='{$baseurl}/wp-tinymce.php?c=1&amp;$version'></script>\n";
-			else
+			} else {
 				echo "<script type='text/javascript' src='{$baseurl}/tiny_mce.js?$version'></script>\n";
+				echo "<script type='text/javascript' src='{$baseurl}/wp-tinymce-schema.js?$version'></script>\n";
+			}
 
 			if ( 'en' != self::$mce_locale && isset($lang) )
 				echo "<script type='text/javascript'>\n$lang\n</script>\n";
