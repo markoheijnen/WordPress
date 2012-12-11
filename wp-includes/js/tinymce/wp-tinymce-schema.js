@@ -58,51 +58,49 @@
 
 		if (!html5) {
 			html5 = mapCache.html5 = unpack({
-					A : 'id|accesskey|class|dir|draggable|item|hidden|itemprop|role|spellcheck|style|subject|title|onclick|ondblclick|onmousedown|onmouseup|onmouseover|onmousemove|onmouseout|onkeypress|onkeydown|onkeyup|lang|xml:lang|dir',
-					B : '#|a|abbr|area|audio|b|bdo|br|button|canvas|cite|code|command|datalist|del|dfn|em|embed|i|iframe|img|input|ins|kbd|keygen|label|link|map|mark|meta|' +
-						'meter|noscript|object|output|progress|q|ruby|samp|script|select|small|span|strong|sub|sup|svg|textarea|time|var|video|wbr|acronym|basefont|font|big|strike|s|u|tt|applet',
-					C : '#|a|abbr|area|address|article|aside|audio|b|bdo|blockquote|br|button|canvas|cite|code|command|datalist|del|details|dfn|dialog|div|dl|em|embed|fieldset|' +
-						'figure|footer|form|h1|h2|h3|h4|h5|h6|header|hgroup|hr|i|iframe|img|input|ins|kbd|keygen|label|link|map|mark|menu|meta|meter|nav|noscript|ol|object|output|' +
-						'p|pre|progress|q|ruby|samp|script|section|select|small|span|strong|style|sub|sup|svg|table|textarea|time|ul|var|video|acronym|basefont|font|big|strike|s|u|tt|applet|isindex|noframes|center|dir'
+					A : 'accesskey|class|contextmenu|dir|draggable|dropzone|hidden|id|inert|itemid|itemprop|itemref|itemscope|itemtype|lang|spellcheck|style|tabindex|title|translate|item|role|subject|onclick|ondblclick|onmousedown|onmouseup|onmouseover|onmousemove|onmouseout|onkeypress|onkeydown|onkeyup',
+					B : '#|a|abbr|area|audio|b|bdi|bdo|br|button|canvas|cite|code|command|data|datalist|del|dfn|em|embed|i|iframe|img|input|ins|kbd|keygen|label|link|map|mark|math|meta|meter|noscript|object|output|progress|q|ruby|s|samp|script|select|small|span|strong|sub|sup|svg|textarea|time|u|var|video|wbr',
+					C : '#|a|abbr|area|address|article|aside|audio|b|bdi|bdo|blockquote|br|button|canvas|cite|code|command|data|datalist|del|details|dfn|dialog|div|dl|em|embed|fieldset|figure|footer|form|h1|h2|h3|h4|h5|h6|header|hgroup|hr|i|iframe|img|input|ins|kbd|keygen|label|link|map|mark|math|menu|meta|meter|nav|noscript|ol|object|output|p|pre|progress|q|ruby|s|samp|script|section|select|small|span|strong|style|sub|sup|svg|table|textarea|time|u|ul|var|video|wbr'
 				}, 'html[A|manifest][body|head]' +
 					'head[A][base|command|link|meta|noscript|script|style|title]' +
 					'title[A][#]' +
 					'base[A|href|target][]' +
-					'link[A|href|rel|media|type|sizes][]' +
+					'link[A|href|rel|media|type|sizes|crossorigin|hreflang][]' +
 					'meta[A|http-equiv|name|content|charset][]' +
-					'style[A|type|media|scoped|xml:space][#]' +
-					'script[A|charset|type|src|defer|async|language|xml:space][#]' +
+					'style[A|type|media|scoped][#]' +
+					'script[A|charset|type|src|defer|async|crossorigin][#]' +
 					'noscript[A][C]' +
-					'body[A|onload|onunload|background|bgcolor|text|link|vlink|alink][C]' +
+					'body[A|onafterprint|onbeforeprint|onbeforeunload|onblur|onerror|onfocus|onfullscreenchange|onfullscreenerror|onhashchange|onload|onmessage|onoffline|ononline|onpagehide|onpageshow|onpopstate|onresize|onscroll|onstorage|onunload][C]' +
 					'section[A][C]' +
 					'nav[A][C]' +
 					'article[A][C]' +
 					'aside[A][C]' +
-					'h1[A|align][B]' +
-					'h2[A|align][B]' +
-					'h3[A|align][B]' +
-					'h4[A|align][B]' +
-					'h5[A|align][B]' +
-					'h6[A|align][B]' +
+					'h1[A][B]' +
+					'h2[A][B]' +
+					'h3[A][B]' +
+					'h4[A][B]' +
+					'h5[A][B]' +
+					'h6[A][B]' +
 					'hgroup[A][h1|h2|h3|h4|h5|h6]' +
 					'header[A][C]' +
 					'footer[A][C]' +
 					'address[A][C]' +
-					'p[A|align][B]' +
-					'br[A|clear][]' +
-					'pre[A|width|xml:space][B]' +
-					'dialog[A][dd|dt]' +
+					'p[A][B]' +
+					'br[A][]' +
+					'pre[A][B]' +
+					'dialog[A|open][C|dd|dt]' +
 					'blockquote[A|cite][C]' +
-					'ol[A|start|reversed|type|compact][li]' +
-					'ul[A|type|compact][li]' +
-					'li[A|value|type][C]' +
-					'dl[A|compact][dd|dt]' +
-					'dt[A][B]' +
+					'ol[A|start|reversed][li]' +
+					'ul[A][li]' +
+					'li[A|value][C]' +
+					'dl[A][dd|dt]' +
+					'dt[A][C|B]' +
 					'dd[A][C]' +
-					'a[A|href|target|ping|rel|media|type|tabindex|onfocus|onblur|charset|name|hreflang|rev|shape|coords][B]' +
+					'a[A|href|target|download|ping|rel|media|type][C|B]' +
 					'em[A][B]' +
 					'strong[A][B]' +
 					'small[A][B]' +
+					's[A][B]' +
 					'cite[A][B]' +
 					'q[A|cite][B]' +
 					'dfn[A][B]' +
@@ -115,6 +113,7 @@
 					'sup[A][B]' +
 					'i[A][B]' +
 					'b[A][B]' +
+					'u[A][B]' +
 					'mark[A][B]' +
 					'progress[A|value|max][B]' +
 					'meter[A|value|min|max|low|high|optimum][B]' +
@@ -122,68 +121,58 @@
 					'ruby[A][B|rt|rp]' +
 					'rt[A][B]' +
 					'rp[A][B]' +
+					'bdi[A][B]' +
 					'bdo[A][B]' +
 					'span[A][B]' +
-					'ins[A|cite|datetime][C]' +
-					'del[A|cite|datetime][C]' +
+					'ins[A|cite|datetime][C|B]' +
+					'del[A|cite|datetime][C|B]' +
 					'figure[A][C|legend|figcaption]' +
 					'figcaption[A][C]' +
-					'img[A|alt|src|height|width|usemap|ismap|name|longdesc|align|border|hspace|vspace][]' +
-					'iframe[A|name|src|height|width|sandbox|seamless|longdesc|frameborder|marginwidth|marginheight|scrolling|align][]' +
+					'img[A|alt|src|srcset|crossorigin|usemap|ismap|width|height][]' +
+					'iframe[A|name|src|srcdoc|height|width|sandbox|seamless|allowfullscreen][C|B]' +
 					'embed[A|src|height|width|type][]' +
-					'object[*][]' +
-					'param[A|name|value|valuetype|type][]' +
-					'details[A|open][C|legend]' +
-					'command[A|type|label|icon|disabled|checked|radiogroup][]' +
-					'menu[A|type|label|compact][C|li]' +
-					'legend[A|align][C|B]' +
-					'div[A|align][C]' +
+					'object[A|data|type|typemustmatch|name|usemap|form|width|height][C|B|param]' +
+					'param[A|name|value][]' +
+					'summary[A][B]' +
+					'details[A|open][C|legend|summary]' +
+					'command[A|type|label|icon|disabled|checked|radiogroup|command][]' +
+					'menu[A|type|label][C|li]' +
+					'legend[A][C|B]' +
+					'div[A][C]' +
 					'source[A|src|type|media][]' +
-					'audio[A|src|autobuffer|autoplay|loop|controls][source]' +
-					'video[A|src|autobuffer|autoplay|loop|controls|width|height|poster][source]' +
-					'hr[A|align|noshade|size|width][]' +
-					'form[A|accept-charset|action|autocomplete|enctype|method|name|novalidate|target|onsubmit|onreset|accept][C]' +
+					'track[A|kind|src|srclang|label|default][]' +
+					'audio[A|src|autobuffer|autoplay|loop|controls|crossorigin|preload|mediagroup|muted][C|source|track]' +
+					'video[A|src|autobuffer|autoplay|loop|controls|width|height|poster|crossorigin|preload|mediagroup|muted][C|source|track]' +
+					'hr[A][]' +
+					'form[A|accept-charset|action|autocomplete|enctype|method|name|novalidate|target][C]' +
 					'fieldset[A|disabled|form|name][C|legend]' +
-					'label[A|form|for|onfocus|onblur][B]' +
-					'input[A|type|accept|alt|autocomplete|autofocus|checked|disabled|form|formaction|formenctype|formmethod|formnovalidate|formtarget|height|list|max|maxlength|min|' +
-						'multiple|pattern|placeholder|readonly|required|size|src|step|width|files|value|name|tabindex|onfocus|onblur|usemap|onselect|onchange|align][]' +
-					'button[A|autofocus|disabled|form|formaction|formenctype|formmethod|formnovalidate|formtarget|name|value|type|tabindex|onfocus|onblur][B]' +
-					'select[A|autofocus|disabled|form|multiple|name|size|tabindex|onfocus|onblur|onchange][option|optgroup]' +
+					'label[A|form|for][B]' +
+					'input[A|type|accept|alt|autocomplete|autofocus|checked|dirname|disabled|form|formaction|formenctype|formmethod|formnovalidate|formtarget|height|inputmode|list|max|maxlength|min|multiple|name|pattern|placeholder|readonly|required|size|src|step|value|width|files][]' +
+					'button[A|autofocus|disabled|form|formaction|formenctype|formmethod|formnovalidate|formtarget|name|type|value][B]' +
+					'select[A|autofocus|disabled|form|multiple|name|required|size][option|optgroup]' +
+					'data[A|value][B]' +
 					'datalist[A][B|option]' +
 					'optgroup[A|disabled|label][option]' +
-					'option[A|disabled|selected|label|value][]' +
-					'textarea[A|autofocus|disabled|form|maxlength|name|placeholder|readonly|required|rows|cols|wrap|tabindex|onfocus|onblur|onselect|onchange][]' +
+					'option[A|disabled|selected|label|value][#]' +
+					'textarea[A|autocomplete|autofocus|cols|dirname|disabled|form|inputmode|maxlength|name|placeholder|readonly|required|rows|wrap][#]' +
 					'keygen[A|autofocus|challenge|disabled|form|keytype|name][]' +
 					'output[A|for|form|name][B]' +
-					'canvas[A|width|height][]' +
-					'map[A|name][B|C]' +
-					'area[A|shape|coords|href|alt|target|media|rel|ping|type|tabindex|onfocus|onblur|nohref][]' +
-					'mathml[A][]' +
+					'canvas[A|width|height][a|button|input]' +
+					'map[A|name][C|B]' +
+					'area[A|alt|coords|shape|href|target|download|ping|rel|media|hreflang|type][]' +
+					'math[A][]' +
 					'svg[A][]' +
-					'table[A|border|summary|width|frame|rules|cellspacing|cellpadding|align|bgcolor][caption|colgroup|thead|tfoot|tbody|tr]' +
-					'caption[A|align][C]' +
-					'colgroup[A|span|width|align|char|charoff|valign][col]' +
-					'col[A|span|width|align|char|charoff|valign][]' +
-					'thead[A|align|char|charoff|valign][tr]' +
-					'tfoot[A|align|char|charoff|valign][tr]' +
-					'tbody[A|align|char|charoff|valign][tr]' +
-					'tr[A|align|char|charoff|valign|bgcolor][th|td]' +
-					'th[A|headers|rowspan|colspan|scope|abbr|axis|align|char|charoff|valign|nowrap|bgcolor|width|height][C]' +
-					'td[A|headers|rowspan|colspan|abbr|axis|scope|align|char|charoff|valign|nowrap|bgcolor|width|height][C]' +
-					'wbr[A][]' +
-					'applet[id|class|style|title|codebase|archive|code|object|alt|name|width|height|align|hspace|vspace][C]' +
-					'tt[A][B]' +
-					'u[A][B]' +
-					's[A][B]' +
-					'strike[A][B]' +
-					'big[A][B]' +
-					'font[id|class|style|title|lang|xml:lang|dir|size|color|face][B]' +
-					'basefont[id|size|color|face][]' +
-					'acronym[A][C]' +
-					'dir[A][li]' +
-					'center[A][C]' +
-					'noframes[A][C]' +
-					'isindex[id|class|style|title|lang|xml:lang|dir|prompt][]'
+					'table[A][caption|colgroup|thead|tfoot|tbody|tr]' +
+					'caption[A][C]' +
+					'colgroup[A|span][col]' +
+					'col[A|span][]' +
+					'thead[A][tr]' +
+					'tfoot[A][tr]' +
+					'tbody[A][tr]' +
+					'tr[A][th|td]' +
+					'th[A|headers|rowspan|colspan|scope][C]' +
+					'td[A|headers|rowspan|colspan][C]' +
+					'wbr[A][]'
 			);
 		}
 
