@@ -1401,21 +1401,18 @@ function get_temp_dir() {
 	if ( $temp )
 		return trailingslashit( rtrim( $temp, '\\' ) );
 
-	$is_win = ( 'WIN' === strtoupper( substr( PHP_OS, 0, 3 ) ) );
-
 	if ( function_exists('sys_get_temp_dir') ) {
 		$temp = sys_get_temp_dir();
-		if ( @is_dir( $temp ) && ( $is_win ? win_is_writable( $temp ) : @is_writable( $temp ) ) ) {
+		if ( @is_dir( $temp ) && wp_is_writable( $temp ) )
 			return trailingslashit( rtrim( $temp, '\\' ) );
-		}
 	}
 
 	$temp = ini_get('upload_tmp_dir');
-	if ( is_dir( $temp ) && ( $is_win ? win_is_writable( $temp ) : @is_writable( $temp ) ) )
+	if ( is_dir( $temp ) && wp_is_writable( $temp ) )
 		return trailingslashit( rtrim( $temp, '\\' ) );
 
 	$temp = WP_CONTENT_DIR . '/';
-	if ( is_dir( $temp ) && ( $is_win ? win_is_writable( $temp ) : @is_writable( $temp ) ) )
+	if ( is_dir( $temp ) && wp_is_writable( $temp ) )
 		return $temp;
 
 	$temp = '/tmp/';
@@ -1423,7 +1420,35 @@ function get_temp_dir() {
 }
 
 /**
+ * Determine if a directory is writable.
+ *
+ * This function is used to work around certain ACL issues 
+ * in PHP primarily affecting Windows Servers.
+ *
+ * @see win_is_writable()
+ *
+ * @since 3.6.0
+ *
+ * @param string $path
+ * @return bool
+ */
+function wp_is_writable( $path ) {
+	if ( 'WIN' === strtoupper( substr( PHP_OS, 0, 3 ) ) )
+		return win_is_writable( $path );
+	else
+		return @is_writable( $path );
+}
+
+/**
  * Workaround for Windows bug in is_writable() function
+ *
+ * PHP has issues with Windows ACL's for determine if a 
+ * directory is writable or not, this works around them by
+ * checking the ability to open files rather than relying
+ * upon PHP to interprate the OS ACL.
+ *
+ * @link http://bugs.php.net/bug.php?id=27609
+ * @link http://bugs.php.net/bug.php?id=30931
  *
  * @since 2.8.0
  *
@@ -1431,16 +1456,12 @@ function get_temp_dir() {
  * @return bool
  */
 function win_is_writable( $path ) {
-	/* will work in despite of Windows ACLs bug
-	 * NOTE: use a trailing slash for folders!!!
-	 * see http://bugs.php.net/bug.php?id=27609
-	 * see http://bugs.php.net/bug.php?id=30931
-	 */
 
-	if ( $path[strlen( $path ) - 1] == '/' ) // recursively return a temporary file path
+	if ( $path[strlen( $path ) - 1] == '/' ) // if it looks like a directory, check a random file within the directory
 		return win_is_writable( $path . uniqid( mt_rand() ) . '.tmp');
-	else if ( is_dir( $path ) )
+	else if ( is_dir( $path ) ) // If it's a directory (and not a file) check a random file within the directory
 		return win_is_writable( $path . '/' . uniqid( mt_rand() ) . '.tmp' );
+
 	// check tmp file for read/write capabilities
 	$should_delete_tmp_file = !file_exists( $path );
 	$f = @fopen( $path, 'a' );
@@ -1884,6 +1905,7 @@ function wp_get_mime_types() {
 	'mpeg|mpg|mpe' => 'video/mpeg',
 	'mp4|m4v' => 'video/mp4',
 	'ogv' => 'video/ogg',
+	'webm' => 'video/webm',
 	'mkv' => 'video/x-matroska',
 	// Text formats
 	'txt|asc|c|cc|h' => 'text/plain',

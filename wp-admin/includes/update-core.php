@@ -535,6 +535,20 @@ $_old_files = array(
 'wp-includes/js/jquery/ui/jquery.effects.pulsate.min.js',
 'wp-includes/js/jquery/ui/jquery.effects.transfer.min.js',
 'wp-includes/js/jquery/ui/jquery.effects.fold.min.js',
+'wp-admin/images/screenshots/captions-1.png',
+'wp-admin/images/screenshots/captions-2.png',
+'wp-admin/images/screenshots/flex-header-1.png',
+'wp-admin/images/screenshots/flex-header-2.png',
+'wp-admin/images/screenshots/flex-header-3.png',
+'wp-admin/images/screenshots/flex-header-media-library.png',
+'wp-admin/images/screenshots/theme-customizer.png',
+'wp-admin/images/screenshots/twitter-embed-1.png',
+'wp-admin/images/screenshots/twitter-embed-2.png',
+'wp-admin/js/utils.js',
+'wp-admin/options-privacy.php',
+'wp-app.php',
+'wp-includes/class-wp-atom-server.php',
+'wp-includes/js/tinymce/themes/advanced/skins/wp_theme/ui.css',
 );
 
 /**
@@ -691,6 +705,13 @@ function update_core($from, $to) {
 		}
 	}
 
+	// 3.5 -> 3.5+ - an empty twentytwelve directory was created upon upgrade to 3.5 for some users, preventing installation of Twenty Twelve.
+	if ( '3.5' == $old_wp_version ) {
+		if ( is_dir( WP_CONTENT_DIR . '/themes/twentytwelve' ) && ! file_exists( WP_CONTENT_DIR . '/themes/twentytwelve/style.css' )  ) {
+			$wp_filesystem->delete( $wp_filesystem->wp_themes_dir() . 'twentytwelve/' );
+		}
+	}
+
 	// Copy New bundled plugins & themes
 	// This gives us the ability to install new plugins & themes bundled with future versions of WordPress whilst avoiding the re-install upon upgrade issue.
 	// $development_build controls us overwriting bundled themes and plugins when a non-stable release is being updated
@@ -700,6 +721,10 @@ function update_core($from, $to) {
 			if ( $development_build || version_compare( $introduced_version, $old_wp_version, '>' ) ) {
 				$directory = ('/' == $file[ strlen($file)-1 ]);
 				list($type, $filename) = explode('/', $file, 2);
+
+				// Check to see if the bundled items exist before attempting to copy them
+				if ( ! $wp_filesystem->exists( $from . $distro . 'wp-content/' . $file ) )
+					continue;
 
 				if ( 'plugins' == $type )
 					$dest = $wp_filesystem->wp_plugins_dir();

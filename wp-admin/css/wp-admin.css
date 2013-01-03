@@ -2786,6 +2786,7 @@ tr.inline-edit-row td,
 
 .inline-edit-row fieldset label.inline-edit-tags span.title {
 	margin: .2em 0;
+	width: auto;
 }
 
 .inline-edit-row fieldset label span.title {
@@ -3531,14 +3532,6 @@ div.tabs-panel-active {
 
 div.tabs-panel-inactive {
 	display:none;
-}
-
-.customlinkdiv ul,
-.posttypediv ul,
-.taxonomydiv ul {
-	list-style: none;
-	padding: 0;
-	margin: 0;
 }
 
 #front-page-warning,
@@ -4604,7 +4597,7 @@ span.imgedit-scale-warn {
 }
 
 h3.available-themes {
-	margin: 0 0 1em;
+	margin: 0.3em 0 1em;
 	float: left;
 }
 
@@ -8455,7 +8448,7 @@ a.widget-control-edit {
 	}
 
 	.sorting-indicator {
-		background-image: url('../images/sort-2x.gif');
+		background-image: url('../images/sort-2x.gif?ver=20130102');
 		background-size: 14px 4px;
 	}
 

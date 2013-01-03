@@ -1042,7 +1042,7 @@ function wp_oembed_add_provider( $format, $provider, $regex = false ) {
 /**
  * Removes an oEmbed provider.
  *
- * @since 3.5
+ * @since 3.5.0
  * @see WP_oEmbed
  *
  * @uses _wp_oembed_get_object()
@@ -1431,6 +1431,11 @@ function wp_prepare_attachment_for_js( $attachment ) {
  * @since 3.5.0
  */
 function wp_enqueue_media( $args = array() ) {
+
+	// Enqueue me just once per page, please.
+	if ( did_action( 'wp_enqueue_media' ) )
+		return;
+
 	$defaults = array(
 		'post' => null,
 	);

@@ -124,7 +124,10 @@ function wp_default_scripts( &$scripts ) {
 	// not used in core, replaced by Jcrop.js
 	$scripts->add( 'cropper', '/wp-includes/js/crop/cropper.js', array('scriptaculous-dragdrop') );
 
-	$scripts->add( 'jquery', '/wp-includes/js/jquery/jquery.js', array(), '1.8.3' );
+	// jQuery
+	$scripts->add( 'jquery', false, array( 'jquery-core', 'jquery-migrate' ) );
+	$scripts->add( 'jquery-core', '/wp-includes/js/jquery/jquery.js', array(), '1.9.0b1' );
+	$scripts->add( 'jquery-migrate', '/wp-includes/js/jquery/jquery-migrate.js', array(), '1.0.0b1' );
 
 	// full jQuery UI
 	$scripts->add( 'jquery-ui-core', '/wp-includes/js/jquery/ui/jquery.ui.core.min.js', array('jquery'), '1.9.2', 1 );
@@ -261,7 +264,7 @@ function wp_default_scripts( &$scripts ) {
 
 	$scripts->add( 'json2', "/wp-includes/js/json2$suffix.js", array(), '2011-02-23');
 
-	$scripts->add( 'underscore', '/wp-includes/js/underscore.min.js', array(), '1.4.0', 1 );
+	$scripts->add( 'underscore', '/wp-includes/js/underscore.min.js', array(), '1.4.1', 1 );
 	$scripts->add( 'backbone', '/wp-includes/js/backbone.min.js', array('underscore','jquery'), '0.9.2', 1 );
 
 	$scripts->add( 'imgareaselect', "/wp-includes/js/imgareaselect/jquery.imgareaselect$suffix.js", array('jquery'), '0.9.8', 1 );
@@ -700,7 +703,7 @@ function _print_scripts() {
 		}
 
 		$concat = str_split( $concat, 128 );
-		$concat = 'load[]=' . implode( '&load[]=', $concat );
+		$concat = 'load%5B%5D=' . implode( '&load%5B%5D=', $concat );
 
 		$src = $wp_scripts->base_url . "/wp-admin/load-scripts.php?c={$zip}&" . $concat . '&ver=' . $wp_scripts->default_version;
 		echo "<script type='text/javascript' src='" . esc_attr($src) . "'></script>\n";
