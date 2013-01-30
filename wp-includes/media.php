@@ -1222,9 +1222,10 @@ function _wp_image_editor_choose( $args = array() ) {
 	require_once ABSPATH . WPINC . '/class-wp-image-editor.php';
 	require_once ABSPATH . WPINC . '/class-wp-image-editor-gd.php';
 	require_once ABSPATH . WPINC . '/class-wp-image-editor-imagick.php';
+	require_once ABSPATH . WPINC . '/class-wp-image-editor-gmagick.php';
 
 	$implementations = apply_filters( 'wp_image_editors',
-		array( 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
+		array( 'WP_Image_Editor_Gmagick', 'WP_Image_Editor_Imagick', 'WP_Image_Editor_GD' ) );
 
 	foreach ( $implementations as $implementation ) {
 		if ( ! call_user_func( array( $implementation, 'test' ), $args ) )
