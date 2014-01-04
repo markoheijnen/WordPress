@@ -191,6 +191,25 @@ function add_image_size( $name, $width = 0, $height = 0, $crop = false ) {
 }
 
 /**
+ * Removed a new image size
+ *
+ * @since 3.9.0
+ *
+ * @param string $name The image size name.
+ * @return bool false on failure, true on success.
+ */
+function remove_image_size( $name ) {
+	global $_wp_additional_image_sizes;
+
+	if( isset( $_wp_additional_image_sizes[$name] ) ) {
+		unset( $_wp_additional_image_sizes[$name] );
+		return true;
+	}
+
+	return false;
+}
+
+/**
  * Registers an image size for the post thumbnail
  *
  * @since 2.9.0
